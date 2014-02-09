@@ -1,0 +1,322 @@
+AUTHOR:
+	Crayonizer is (C) 2013 Colum Paget, libUseful is (C) 2009 Colum Paget. They are released under the GPL so you may do anything with them that the GPL allows.
+
+
+CONTACT:
+	Email: colums.projects@gmail.com
+	Blog:  http://idratherhack.blogspot.com
+
+
+DISCLAIMER:
+  This is free software. It comes with no guarentees and I take no responsiblity if it makes your computer explode, opens a portal to the demon dimensions, or does anything at all.
+
+
+SYNOSIS:
+	Crayonizer is an application that colors in the output of command-line programs using ANSI escape codes. 
+
+VERSION:
+	0.7 
+
+INSTALL:
+	SHOULD be as simple as './configure ; make; make install'. There are no library files, only a single 'crayonizer' executable, so you can copy that by hand to wherever you wish it to live. The default install is into a directory called '/usr/prebin'. This will need to be configured as the first directory in your path.
+
+USAGE:
+	crayonizer -?             print help
+	crayonizer -h             print help
+	crayonizer -help          print help
+	crayonizer --help         print help
+	crayonizer -pmatch-help   print help for 'pmatch' pattern matches
+	crayonizer -config-help   print help for config file
+	crayonizer -stdin <entry name>  Read from stdin and crayonize it against the named entry in the config file.
+	crayonizer <program path>	Run 'program' and crayonize it's output using matching entry in config file.
+
+	Normally, however, crayonizer will not be invoked under its own name, but invoked under the name of the program that it will run and crayonize.
+
+HOW IT WORKS:
+	Crayonizer reads instructions from /etc/crayonizer.conf or ~.crayonizer.conf, and uses them to color a program's output. You can run it against a program by:
+
+		crayonizer <program path>
+
+	e.g.
+ 
+		crayonizer /usr/sbin/tcpdump
+
+
+	However, crayonizer is intended to be installed into a directory that is at the 'front' of the user's PATH. Symbolic links are then made in that directory that have the same name as a command that one wishes to crayonize, but which point to the crayonizer executable. So, if we installed crayonizer to /usr/prebin, then w set our PATH to be:
+
+	PATH=/usr/prebin:/usr/local/bin:/usr/bin:/bin
+
+and then create symbolic links in prebin:
+
+	ln -s crayonizer gcc
+
+	When the shell goes looking for a command, it will find it first in /usr/prebin (if we've made the appropriate symbolic link) and will run that. It will, in fact, be running crayonizer, as that's what the symbolic link really points to. Crayonizer will start up and read its config file (either ~/.crayonizer.conf or /etc/crayonizer.conf) and will find a 'CrayonizerDir' entry in there. It will reset the PATH environment variable to NOT INCLUDE the CrayonizerDir (/usr/prebin) in this example. Thus, in this example, the new PATH will be:
+
+	/usr/local/bin:/usr/bin:/bin
+
+	Crayonizer now shells the original command, but this time as the crayonizer install directory is not included in the PATH, the 'real' executable will be found and run. Crayonize will read the output of this command, and 'crayonize' it, applying colors and other modifications. The details of which 'crayonizations' to apply to which text are provided in the 'entry' sections of the config file.
+
+CONFIG FILE:
+	Crayonizer uses a config file to configure its behavior. For systemwide setup it will look in the file '/etc/crayonizer.conf'. Then it will look for .crayonizer.conf in the users home directory (note the leading '.' in the user filename).
+
+	The crayonizer config file MUST contain a 'CrayonizerDir' entry so crayonizer knows where it lives so that it can avoid starting itself. If crayonizer spawns itself, the results will be really bad, because the new crayonize process will also spawn itself, as will the next, and the next, and the next (it's the programmatic equivalent from that scene from Disney's Fantasia where Mickey creates all the golem brooms). This is called a 'forkbomb' and it can take down some systems by filling up their processs tables.
+
+	The config file also contains 'entry' sections for each program that you want to crayonize. These contain either settings related to running/crayonizing the program, or 'crayonization' lines of the form '<action type> <pattern match> <crayonizations> 
+
+
+SETTINGS:
+	These change the behavior of crayonizer's interaction with the program that it's crayonizing. 
+
+		passinput
+
+	Send keyboard input to the program we're crayonizing. If you don't add this then anything you type will be picked up by the shell when crayonizer stops running. So, you can type 'make' then type your next command, and have that run when make is finished. If you do add this, then everything you type will be sent to the program being crayonized (generally important if that program is, for instance, ssh).
+
+		args <arguments>
+
+	Insert <arguments> into the command-line before the crayonized program is run, allowing you to, for instance, pass switches to gcc.
+
+		stripansi
+
+		Strip any ANSI codes from the program output before crayonizing. This setting does allow 'clearscreen' or 'movecursor' codes through, but will strip out ANSI that changes colors or attributes that might interfere with crayonizing.
+
+		expectlines
+
+		Expect the program output to be made up of lines terminated by newline. This is particularly important if usig the 'section' match, which needs to have the entirity of a line read in before being applied. However, this setting can cause problems when used with programs that, for instance, output a prompt that isn't terminated by a newline, and then wait for user input.
+		
+
+CRAYONIZATION LINES:
+
+	e.g. 
+
+		entry gcc
+		{
+		line error: red
+		line warning: yellow
+		}
+
+	If crayonizer finds itself run under the name 'gcc' (via symbolic link) then it will apply these crayonizations. If we want to apply the same commands to, say, g++, then rather than write a new entry for g++ we can use the '|' operator, thusly.
+
+		entry gcc|g++
+		{
+		line error: red
+		line warning: yellow
+		}
+
+	In some situations you only want to crayonize output from a command if it has a certain argument. Thus:
+
+		entry cat /proc/cpuinfo
+		{
+		line bogomips magenta
+		line 'cpu MHz' green
+		line 'model name' yellow bold
+		string Intel bold
+		}
+
+	Will only crayonize the output of cat if it has one argument '/proc/cpuinfo'. If you want to crayonize cat, tail, and head of /proc/cpuinfo, try:
+
+		entry cat|tail|head /proc/cpuinfo
+		{
+		line bogomips magenta
+		line 'cpu MHz' green
+		line 'model name' yellow bold
+		string Intel bold
+		}
+
+	'line' entries apply the crayonizations to an entire line of text. If you only want to highlight a given word, then use 'string' matches. e.g.
+
+		entry gcc|g++
+		{
+		string error: red
+		string warning: yellow
+		}
+
+	This entry will only color the words 'error:' and 'warning:', whereas the previous entry would color the entire lines those words occurred in.
+
+	If you've got any whitespace in the pattern match, then you'll need to use quotes, thusly:
+
+		string "color this in red" red
+
+	If you want to only color a string if it has a certain numeric value, then use the 'value' match
+
+		value " \D*%" >0 green
+		value " \D*%" >30 yellow
+		value " \D*%" >80 red
+
+	This will match anything that starts with a digit (\D) and ends with a '%' and color it appropriately if it's >  a value. Available comparison operators are '<', '>', '==' and '!=' (the latter two can be shortened to '=' and '!').
+
+	If you don't want the '%' crayonized in this case, you'd use the 'Text Extraction' on/off switch to exclude it. Thusly:
+
+		value " \D*\-X%" >0 green
+
+	Multiple 'Value' matches can be combined in one line, thusly
+
+		value " \D*%" >0 green >30 yellow >50 yellow bold >50 red >70 red inverse
+
+	Sometimes you will want to color some output with randomly selected attributes in order to distinguish between different values of the output. For this purpose the 'mapto' match is provided. This will sum the characters of the matched string into a value, and then use that value to select from a list of attributes. For example:
+
+	 mapto "\-X IP\+X *:" red green yellow magenta cyan white black/red black/white "blue bold" "red inverse" 
+
+	will pick out the part of tcpdump output that identifies the two hosts that are communicating. It will convert the hostnames to a value by summing all their characters, and then use this value to select one of the subsequent list of attributes. Note that, for attributes with more than one argument, quotes are needed to distingish between two choices, and two attributes that are part of the same choice.
+
+	If you changed this 'mapto' to a 'linemapto', like this
+
+	 linemapto "\-X IP\+X *:" red green yellow magenta cyan white black/red black/white "blue bold" "red inverse" 
+
+	Then the entire line will be colored, not just the matching string.
+
+	You can apply matches to a line or set of lines with 'lineno' e.g.
+
+		lineno =5 red
+
+	would color line 5 in red
+
+		lineno <6
+		{
+			string "^\A*:" bold cyan
+			string "\D\D:\D\D:\D\D\-X up" white/blue
+		}
+
+	would apply matches to only the first 6 lines
+
+	If you want to apply matches to a sub-section of a line, then:
+
+	  section 15-20
+  	{
+  		value " \D* " <20 red =20 blue >20 green
+  		string RT red
+  	}
+
+	this will only apply the matches to a substring on the line in the range 15-20 characters. If using the 'section' match it's normally a good idea to use the 'expectlines' setting, to ensure that a full line has been read before applying matches.
+	
+
+	'append' and 'prepend' add lines before and after the program is run. So:
+
+		entry tar
+		{
+			append "Should you have used --dereference?" red bold
+		}
+
+	prints a line at the end of every 'tar' command, reminding me to use --dereference when building tarballs
+
+	'cmdline' is used to match text in the command line. This is normally used to set environment variables in 'append' and 'prepend'.
+
+
+IF STATEMENTS:
+	Crayonizer provides a crude form of 'if' statement. It has the form:
+
+if <condition> <crayonizations>
+
+e.g.
+
+if exists(/dev/dsp) setenv DEV=/dev/dsp
+
+The types of condition available are:
+
+exists(path)					Check if file/directory exists
+isatty(stdin|stdout)	if stdin or stdout is a tty
+notatty(stdin|stdout)	if stdin or stdout is NOT a tty
+arg(arg)              Check for a command-line argument (1 character arguments)
+larg(arg)             Check for a command-line argument (long arguments)
+
+"<value> = <value>"
+"<value> ! <value>"
+"<value> > <value>"
+"<value> < <value>"
+
+Where '<value>' is either an environment variable in the form $(varname) or else is a string constant. The ! and = operators treat the values as strings, but the '<' and '>' values treat them as integers.
+
+
+CRAYONIZER ACTIONS:
+
+	The currently recognized actions for crayonizer are:
+
+		black white red green blue magenta cyan yellow darkgrey lightred lightgreen lightyello lightblue lightmagenta lightcyan bold inverse uppercase lowercase blink caps underline hide basename setenv setxtitle restorextitle passto send echo clrtoeol cleartoeol cls clearscreen altscreen dontcrayon playsound
+
+	
+	'caps' is a shorthand for 'uppercase'. 
+
+	Foreground/Background color combinations can be set by use of a '/', thusly:
+
+		white/blue
+
+	'light' and 'dark' colors only work in terminals that support xterm 16-bit colors
+
+	'setenv' sets an environment variable, whose name is specified by the next argument. Currently environment variables can only be used in 'append', 'prepend', 'echo', 'send' and 'passto' commands. e.g.
+
+		entry ssh
+		{
+			cmdline "\-X@\+X*" setenv SSH_DEST
+			prepend "SSH $(SSH_DEST)" setxtitle hide
+		}
+
+	'hide' suppresses text output. This currently only works on entire lines, but will probably be able to work on substrings in future.
+
+	'setxtitle' sets the title-bar of xterm compliant terminals to the 'matched' text. 'restorextitle' restores it to its value before crayonizer ran.
+
+	'basename' changes the text extraction to the last part of a file path. So, if you match '/home/mydir/myfile.txt' the match will change to 'myfile.txt' and only that bit will be crayonized. 'basename' is positional, so:
+
+	line "Playing " bold cyan basename red
+
+	Will match any line with 'Playing' in it, say 'Playing /home/mydir/music.mp3', and color it in cyan, but then apply 'basename' matching just 'music.mp3' and color that in red.
+
+	'passto' will run a program, and pass the crayonized output to it. Thus:
+
+		string "\*\*?B00000000000000\r" hide passto "/usr/bin/lrz -v " send "\r"
+
+	Will detect the zmodem attention string, hide it, and pass all subsequent output to lrz, and when that's finished running, will send "\r" back to the source of the zmodem attention string. This can be used to add zmodem support to ssh.
+
+	'echo' will simply print something out. e.g.
+
+		string "foo" hide echo "bar"
+
+	will detect 'foo', hide it, and output 'bar' in it's place.
+
+	'playsound' will play a wav file e.g:   playsound /usr/share/sounds/lmarbles/teleport.wav
+
+	'dontcrayon' will suppress crayonization of future lines
+
+	'altscreen' will switch to the alternative screen buffer in terminals that support this
+
+	'normscreen' will switch back to the standard screen buffer	
+	
+	'cleartoeol' and 'clrtoeol' will clear to the end of a crayonized line. This is normally used with lines that have a colored background, and where it is desired for this background to traverse the width of the page. Without clearing to the end of the line the colored background would effect only the printed text.
+
+	'cls' and 'clearscreen' will clear the screen
+	
+
+PMATCH PATTERN MATCHES:
+	Crayonizer uses it's own 'pmatch' system for pattern matches (I couldn't get my head around regular expressions). This system is 'non greedy', so it matches the shortest string that it can, not the longest like POSIX regular expressions. Pmatch recognizes the following tokens:
+
+	?:    Match any single character
+	*:    Match any substring
+	^:    Match start of line
+	$:    Match end of line
+	[]:   Match list of characters. e.g. [123456789]
+	\:    Quote a character, so it's not interpreted, unless it's one of the following interpretations.
+	\xFF: Match a character by hex value, where 'FF' is the hex value. e.g. \x20 is 'space'
+	\000: Match a character by octal value, where '000' is the octal value. e.g. \040 is 'space'
+	\+S   Turn pmatch switch on or off, where 'S' is the switch character.  Available switches: 'C' (case sensitivity) 'X' (text extraction) 'W' (wildcards)  
+	\b:   backspace
+	\e:   escape
+	\l:   Any lowercase alphabectic character
+	\n:   newline
+	\r:   carriage return
+	\t:   tab
+	\A:   Any alphabetic charcter
+	\B:   Any alpha-numeric character
+	\D:   Any decimal digit
+	\S:   Any whitespace character
+	\P:   Any punctuation character
+	\X:   Any hexadecimal digit
+	\U:   Any uppercase alphabetic character
+	
+PMatch Switches:
+
+	The \+ and \- operators can be used to turn on and off certain features of the pmatch system. For instance, \-C would turn off case sensitivity, and \+C would turn it back on again.
+The \+X and \-X switches turn 'text extraction' on and off. This allows you to match a string, but only crayonize a substring of the matched string. For example:
+
+  \-X Match this whole string but \+X Crayonize only this bit \-X but not this bit
+
+the \-W switch turns off wildcarding, so only switches are honored. This turns the pmatch into a straight strcmp until turned back on with \+W
+
+

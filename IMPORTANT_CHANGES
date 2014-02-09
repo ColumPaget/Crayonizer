@@ -1,0 +1,17 @@
+Version 0.5 includes a few important changes.
+
+keyboard input is no longer automatically passed to the crayonized program, the new setting 'passinput' must be included in the entry for a given program.
+
+The 'sentenv' verb no longer has the form 'setenv:<name>' but instead 'setenv <name>' (where <name> is the name of the environment variable to be set).
+
+
+So, for example:
+
+entry ssh
+{
+passinput
+cmdline " \A*@*" setenv SSH_DEST
+prepend "SSH $(SSH_DEST)" setxtitle hide
+}
+
+
