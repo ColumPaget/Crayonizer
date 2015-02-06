@@ -4,18 +4,29 @@
 #define va_copy(dest, src) (dest) = (src) 
 #endif 
 
+
 /*
-int StrLen(char *Str)
+size_t StrLen(const char *Str)
 {
+char *ptr, *end;
+
 if (! Str) return(0);
-return(strlen(Str));
+
+ptr=Str;
+end=ptr + LibUsefulObjectSize(Str, 0);
+while ((ptr < end) && (*ptr != '\0')) ptr++;
+return(ptr-Str);
 }
 */
 
 
-char *DestroyString(char *string)
+
+
+char *DestroyString(char *Obj)
 {
-if (string) free(string);
+size_t size;
+
+free(Obj);
 // we return a null to be put into the string ptr 
 return(0);
 }
@@ -24,20 +35,20 @@ return(0);
 
 int CompareStr(const char *S1, const char *S2)
 {
-int len1, len2;
-len1=StrLen(S1);
-len2=StrLen(S2);
-if ((len1==0) && (len2==0)) return(0);
+if (
+		((!S1) || (*S1=='\0')) && 
+		((!S2) || (*S2=='\0'))
+	) return(0);
 
-if (len1==0) return(-1);
-if (len2==0) return(1);
+if ((!S1) || (*S1=='\0')) return(-1);
+if ((!S2) || (*S2=='\0')) return(1);
 
 return(strcmp(S1,S2));
 }
 
 
 
-char *CopyStrLen(char *Dest, const char *Src,int len)
+char *CopyStrLen(char *Dest, const char *Src,size_t len)
 {
 char *ptr;
 ptr=CopyStr(Dest,Src);
@@ -45,10 +56,10 @@ if (StrLen(ptr) >len) ptr[len]=0;
 return(ptr);
 }
 
-char *CatStrLen(char *Dest, const char *Src,int len)
+char *CatStrLen(char *Dest, const char *Src,size_t len)
 {
 char *ptr;
-int catlen=0;
+size_t catlen=0;
 
 catlen=StrLen(Dest);
 ptr=CatStr(Dest,Src);
@@ -60,9 +71,6 @@ return(ptr);
 
 char *CopyStr(char *Dest, const char *Src)
 {
-int len;
-char *ptr;
-
 if (Dest) *Dest=0;
 return(CatStr(Dest,Src));
 }
@@ -72,9 +80,10 @@ return(CatStr(Dest,Src));
 char *VCatStr(char *Dest, const char *Str1,  va_list args)
 {
 //initialize these to keep valgrind happy
-int len=0;
+size_t len=0;
 char *ptr=NULL;
 const char *sptr=NULL;
+
 
 if (Dest !=NULL) 
 {
@@ -130,7 +139,7 @@ return(ptr);
 
 char *CatStr(char *Dest, const char *Src)
 {
-int len;
+size_t len;
 char *ptr;
 
 if (Dest !=NULL) 
@@ -167,7 +176,7 @@ return(CopyStr(NULL,Str));
 
 char *VFormatStr(char *InBuff, const char *InputFmtStr, va_list args)
 {
-int inc=100, count=1, result=0;
+int inc=100, count=1, result=0, FmtLen;
 char *Tempstr=NULL, *FmtStr=NULL;
 va_list argscopy;
 
@@ -175,11 +184,19 @@ Tempstr=InBuff;
 
 //Take a copy of the supplied Format string and change it.
 //Do not allow '%n', it's useable for exploits
+
+FmtLen=StrLen(InputFmtStr);
+#ifdef USE_ALLOCA
+FmtStr=alloca(FmtLen);
+strncpy(FmtStr,InputFmtStr,FmtLen);
+#else
 FmtStr=CopyStr(FmtStr,InputFmtStr);
+#endif
+
 EraseString(FmtStr, "%n");
 
 
-inc=4 * StrLen(FmtStr); //this should be a good average
+inc=4 * FmtLen; //this should be a good average
 for (count=1; count < 100; count++)
 {
 	result=inc * count +1;
@@ -206,8 +223,9 @@ for (count=1; count < 100; count++)
    break;
 }
 
+#ifndef USE_ALLOCA
 DestroyString(FmtStr);
-
+#endif
 
 return(Tempstr);
 }
@@ -216,7 +234,6 @@ return(Tempstr);
 
 char *FormatStr(char *InBuff, const char *FmtStr, ...)
 {
-int inc=100, count=1, result;
 char *tempstr=NULL;
 va_list args;
 
@@ -239,7 +256,7 @@ return(ptr);
 }
 
 
-inline char *AddCharToBuffer(char *Dest, int DestLen, char Char)
+inline char *AddCharToBuffer(char *Dest, size_t DestLen, char Char)
 {
 char *actb_ptr;
 
@@ -254,7 +271,7 @@ return(actb_ptr);
 }
 
 
-inline char *AddBytesToBuffer(char *Dest, int DestLen, char *Bytes, int NoOfBytes)
+inline char *AddBytesToBuffer(char *Dest, size_t DestLen, char *Bytes, size_t NoOfBytes)
 {
 char *actb_ptr=NULL;
 
@@ -269,7 +286,7 @@ return(actb_ptr);
 
 
 
-char *SetStrLen(char *Str,int len)
+char *SetStrLen(char *Str,size_t len)
 {
 /* Note len+1 to allow for terminating NULL */
 if (Str==NULL) return((char *) calloc(1,len+1));
@@ -279,75 +296,85 @@ else return( (char *) realloc(Str,len+1));
 
 char *strlwr(char *str)
 {
-int count, len;
-len=StrLen(str);
-for (count=0; count < len; count++) str[count]=tolower(str[count]);
+char *ptr;
+
+if (! str) return(NULL);
+for (ptr=str; *ptr !='\0'; ptr++) *ptr=tolower(*ptr);
 return(str);
 }
+
 
 char *strupr(char *str)
 {
-int count, len;
-len=StrLen(str);
-for (count=0; count < len; count++) str[count]=toupper(str[count]);
+char *ptr;
+if (! str) return(NULL);
+for (ptr=str; *ptr !='\0'; ptr++) *ptr=toupper(*ptr);
 return(str);
 }
 
+
 char *strrep(char *str, char oldchar, char newchar)
 {
-int count, len;
-len=StrLen(str);
-for (count=0; count < len; count++) 
+char *ptr;
+
+if (! str) return(NULL);
+for (ptr=str; *ptr !='\0'; ptr++) 
 {
-if (str[count]==oldchar) str[count]=newchar;
+if (*ptr==oldchar) *ptr=newchar;
 }
 return(str);
 }
 
 char *strmrep(char *str, char *oldchars, char newchar)
 {
-int count, len;
-len=StrLen(str);
-for (count=0; count < len; count++) 
+char *ptr;
+
+if (! str) return(NULL);
+for (ptr=str; *ptr !='\0'; ptr++) 
 {
-if (strchr(oldchars,str[count])) str[count]=newchar;
+if (strchr(oldchars,*ptr)) *ptr=newchar;
 }
 return(str);
 }
 
-void StripTrailingWhitespace(char *String)
+void StripTrailingWhitespace(char *str)
 {
-int count,len;
+size_t len;
+char *ptr;
 
-len=StrLen(String);
+len=StrLen(str);
 if (len==0) return;
-for(count = len-1; (count >-1) && isspace(String[count]); count--) String[count]=0;
+for(ptr=str+len-1; (ptr >= str) && isspace(*ptr); ptr--) *ptr='\0';
 }
 
 
-void StripLeadingWhitespace(char *String)
+void StripLeadingWhitespace(char *str)
 {
-int count,len;
+char *ptr, *start=NULL;
 
-len=StrLen(String);
-if (len==0) return;
-for(count = 0; (count <len -1) && isspace(String[count]); count++);
-memmove(String,String+count,len-count);
-String[len-count]=0;
+if (! str) return;
+for(ptr=str; *ptr !='\0'; ptr++)
+{
+	if ((! start) && (! isspace(*ptr))) start=ptr;
+}
+
+if (!start) start=ptr;
+ memmove(str,start,ptr+1-start);
 }
 
 
 
 void StripCRLF(char *Line)
 {
-int len, count;
+size_t len;
+char *ptr;
 
 len=StrLen(Line);
 if (len < 1) return;
 
-for (count=len-1; (count > -1); count--)
+for (ptr=Line+len-1; ptr >= Line; ptr--)
 {
-   if ((Line[count]=='\r') || (Line[count]=='\n')) Line[count]=0;
+   if (strchr("\n\r",*ptr)) *ptr='\0';
    else break;
 }
 
@@ -365,7 +392,7 @@ len=StrLen(ptr);
 
 if ((*ptr=='"') || (*ptr=='\'')) StartQuote=*ptr;
 
-if ((len > 0) && (StartQuote != '\0'))
+if ((len > 0) && (StartQuote != '\0') && (ptr[len-1]==StartQuote))
 {
 if (ptr[len-1]==StartQuote) ptr[len-1]='\0';
 memmove(Str,ptr+1,len);
@@ -378,48 +405,48 @@ char *EnquoteStr(char *Out, const char *In)
 {
 const char *ptr;
 char *ReturnStr=NULL;
-int len=0;
+size_t len=0;
 
 ptr=In;
 ReturnStr=CopyStr(Out,"");
 
 while (ptr && (*ptr != '\0'))
 {
-        switch (*ptr)
-        {
+	switch (*ptr)
+	{
 		case '\\':
-                case '"':
-                case '\'':
-                  ReturnStr=AddCharToBuffer(ReturnStr,len,'\\');
-		  len++;
-                  ReturnStr=AddCharToBuffer(ReturnStr,len, *ptr);
-		  len++;
-                  break;
+		case '"':
+		case '\'':
+		ReturnStr=AddCharToBuffer(ReturnStr,len,'\\');
+		len++;
+		ReturnStr=AddCharToBuffer(ReturnStr,len, *ptr);
+		len++;
+		break;
 
 
-                case '\r':
-                  ReturnStr=AddCharToBuffer(ReturnStr,len,'\\');
-		  len++;
-                  ReturnStr=AddCharToBuffer(ReturnStr,len, 'r');
-		  len++;
-                break;
-
-
-                case '\n':
-                  ReturnStr=AddCharToBuffer(ReturnStr,len,'\\');
-		  len++;
-                  ReturnStr=AddCharToBuffer(ReturnStr,len, 'n');
-		  len++;
-                break;
-
-                default:
-                  ReturnStr=AddCharToBuffer(ReturnStr,len, *ptr);
-		  len++;
-                break;
-        }
-        ptr++;
-
+		case '\r':
+		ReturnStr=AddCharToBuffer(ReturnStr,len,'\\');
+		len++;
+		ReturnStr=AddCharToBuffer(ReturnStr,len, 'r');
+		len++;
+		break;
+		
+		
+		case '\n':
+		ReturnStr=AddCharToBuffer(ReturnStr,len,'\\');
+		len++;
+		ReturnStr=AddCharToBuffer(ReturnStr,len, 'n');
+		len++;
+		break;
+		
+		default:
+		ReturnStr=AddCharToBuffer(ReturnStr,len, *ptr);
+		len++;
+		break;
+		}
+	ptr++;
 }
+
 return(ReturnStr);
 }
 
@@ -427,31 +454,41 @@ return(ReturnStr);
 
 int MatchTokenFromList(const char *Token,char **List, int Flags)
 {
-int count, len;
+int count;
+size_t tlen, ilen;
+char Up1stChar, Lwr1stChar;
+char *Item;
 
+if ((! Token) || (*Token=='\0')) return(-1); 
+Up1stChar=toupper(*Token);
+Lwr1stChar=tolower(*Token);
+tlen=StrLen(Token);
 for (count=0; List[count] !=NULL; count++)
 {
-  len=StrLen(List[count]);
-  if (len==0) continue;
-  if (StrLen(Token) < len) continue;
+	Item=List[count];
+	if ((*Item==Lwr1stChar) || (*Item==Up1stChar))
+	{
+	ilen=StrLen(Item);
 
   if (Flags & MATCH_TOKEN_PART)
   {
+  	if (tlen > ilen) continue;
     if (Flags & MATCH_TOKEN_CASE)
     {
-	    if (strncmp(Token,List[count],len)==0) return(count);
+	    if (strncmp(Token,*Item,ilen)==0) return(count);
     }
-    else if (strncasecmp(Token,List[count],len)==0) return(count);
+    else if (strncasecmp(Token,*Item,ilen)==0) return(count);
   }
   else 
   {
-  	if (StrLen(Token) != len) continue;
-	if (Flags & MATCH_TOKEN_CASE)
-	{
-		if(strcmp(Token,List[count])==0)  return(count);
-	}
+  	if (tlen != ilen) continue;
+		if (Flags & MATCH_TOKEN_CASE)
+		{
+			if(strcmp(Token,List[count])==0)  return(count);
+		}
   	else if (strcasecmp(Token,List[count])==0) return(count);
   }
+	}
 }
 return(-1);
 }
@@ -460,16 +497,22 @@ return(-1);
 
 int MatchLineStartFromList(const char *Token,char **List)
 {
-int count, len;
+int count;
+size_t len;
 
+if ((! Token) || (*Token=='\0')) return(-1); 
+if (! List) return(-1);
 for (count=0; List[count] !=NULL; count++)
 {
+	if (*Token==*List[count])
+	{
   len=StrLen(List[count]);
 
   if (
        (len >0) && 
        (strncasecmp(Token,List[count],len)==0) 
      ) return(count);
+	}
 }
 return(-1);
 }
@@ -500,20 +543,39 @@ return(ptr);
 }
 
 
-//This function searches for the separator
+
+
+//This function searches for the separator. It uses 'strchr' rather 
+//than a naieve ptr++ approach, because strchr is impossibly fast.
+//No, really, if you've never tried to beat the performance of the
+//glibc strchr, with mmx or sse or something like that, then give it
+//a go. It's enlightening.
 int GetTokenSepMatch(char *Pattern, char **start, char **end, int Flags)
 {
 char *pptr, *eptr;
 int MatchChar, InQuotes=FALSE;
 
 
-pptr=Pattern;
 
-
+//Handle any quotes around the string we are searching in
 if (Flags & GETTOKEN_QUOTES) *start=HandleQuotes(*start);
 if (*start==*end) return(FALSE);
 
-eptr=*start;
+pptr=Pattern;
+if (*pptr !='\\')
+{
+	//strchr is insanely fast, so see if the first character of our separator
+	//is in the string!
+	eptr=strchr(*start,*pptr);
+	if (! eptr) return(FALSE);
+
+	//rewind in case we've found an
+	//escaped character
+	if (eptr > *start) eptr--;
+}
+else eptr=*start;
+
+
 while (1)
 {
 //if we run out of pattern, then we got a match
@@ -560,15 +622,19 @@ else if (*eptr != *pptr) return(FALSE);
 pptr++;
 eptr++;
 }
+
 return(FALSE);
 }
 
 
 
+
+//Get token allows multiple separators, so this breaks up the
+//separator string into individual separators
 char *GetNextSeparator(char *Pattern, char **Sep, int Flags)
 {
 char *ptr;
-int len=0;
+size_t len=0;
 
 ptr=Pattern;
 if (*ptr=='\0') return(NULL);
@@ -646,7 +712,7 @@ char *GetToken(const char *SearchStr, const char *Separator, char **Token, int F
 char *Tempstr=NULL;
 const char *SepStart=NULL, *SepEnd=NULL;
 const char *ptr, *ssptr;
-int len=0;
+size_t len=0;
 
 
 /* this is a safety measure so that there is always something in Token*/
@@ -686,7 +752,8 @@ return((char *) SepEnd);
 char *DeQuoteStr(char *Buffer, const char *Line)
 {
 char *out, *in;
-int olen=0;
+size_t olen=0;
+char hex[3];
 
 if (Line==NULL) return(NULL);
 out=CopyStr(Buffer,"");
@@ -705,7 +772,7 @@ while(in && (*in != '\0') )
 			break;
 
 
-		   case 'n': 
+		  case 'n': 
 			out=AddCharToBuffer(out,olen,'\n');
 			olen++;
 			break;
@@ -715,14 +782,21 @@ while(in && (*in != '\0') )
 			olen++;
 			break;
 
-		   case 't': 
+		  case 't': 
 			out=AddCharToBuffer(out,olen,'\t');
 			olen++;
 			break;
 
+			case 'x':
+			in++; hex[0]=*in;
+			in++; hex[1]=*in;
+			hex[2]='\0';
+			out=AddCharToBuffer(out,olen,strtol(hex,NULL,16) & 0xFF);
+			olen++;
+			break;
 
-		   case '\\': 
-		   default:
+		  case '\\': 
+		  default:
 			out=AddCharToBuffer(out,olen,*in);
 			olen++;
 			break;
@@ -744,30 +818,29 @@ return(out);
 
 char *QuoteCharsInStr(char *Buffer, const char *String, const char *QuoteChars)
 {
-char *Tempstr=NULL;
-int si, ci, slen, clen, olen=0;
+char *RetStr=NULL;
+char *sptr, *cptr;
+size_t olen=0;
 
-slen=StrLen(String);
-clen=StrLen(QuoteChars);
+RetStr=CopyStr(Buffer,"");
+if (! String) return(RetStr);
 
-Tempstr=CopyStr(Buffer,"");
-
-for (si=0; si < slen; si++)
+for (sptr=String; *sptr !='\0'; sptr++)
 {
-	for (ci=0; ci < clen; ci++)
+	for (cptr=QuoteChars; *cptr !='\0'; cptr++)
 	{
-  		if (String[si]==QuoteChars[ci])
+  	if (*sptr==*cptr)
 		{
-			Tempstr=AddCharToBuffer(Tempstr,olen, '\\');
+			RetStr=AddCharToBuffer(RetStr,olen, '\\');
 			olen++;
 			break;
 		}
 	}
-	Tempstr=AddCharToBuffer(Tempstr,olen,String[si]);
+	RetStr=AddCharToBuffer(RetStr,olen,*sptr);
 	olen++;
 }
 
-return(Tempstr);
+return(RetStr);
 }
 
 

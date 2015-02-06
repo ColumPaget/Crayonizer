@@ -190,7 +190,7 @@ return(tty);
 int GrabPseudoTTY(int *pty, int *tty, int TermFlags)
 {
 char c1,c2;
-char *Buffer=NULL;
+char *Tempstr=NULL;
 
 //first try unix98 style
 *pty=open("/dev/ptmx",O_RDWR);
@@ -198,12 +198,17 @@ if (*pty > -1)
 {
 	grantpt(*pty);
 	unlockpt(*pty);
-	if ( (*tty=open((char *) ptsname(*pty),O_RDWR)) >-1)
+	//Tempstr=CopyStr(Tempstr,ptsname(*pty));
+	Tempstr=SetStrLen(Tempstr,100);
+	if (ptsname_r(*pty,Tempstr,100) == 0)
 	{
-		InitTTY(*tty,0,TermFlags);
-		return(1);
+		if ( (*tty=open(Tempstr,O_RDWR)) >-1)
+		{
+			InitTTY(*tty,0,TermFlags);
+			return(1);
+		}
 	}
-	
+	close(*pty);
 }
 
 //if unix98 fails, try old BSD style
@@ -212,13 +217,13 @@ for (c1='p'; c1 < 's'; c1++)
 {
   for (c2='5'; c2 <='9'; c2++)
   {
-   Buffer=FormatStr(Buffer,"/dev/pty%c%c",c1,c2);
-   if ( (*pty=open(Buffer,O_RDWR)) >-1)
+   Tempstr=FormatStr(Tempstr,"/dev/pty%c%c",c1,c2);
+   if ( (*pty=open(Tempstr,O_RDWR)) >-1)
    {
-      Buffer=FormatStr(Buffer,"/dev/tty%c%c",c1,c2);
-      if ( (*tty=OpenTTY(Buffer,0,TermFlags)) >-1)
+      Tempstr=FormatStr(Tempstr,"/dev/tty%c%c",c1,c2);
+      if ( (*tty=OpenTTY(Tempstr,0,TermFlags)) >-1)
       {
-				DestroyString(Buffer);
+				DestroyString(Tempstr);
         return(1);
       }
       else close(*pty);
@@ -228,7 +233,7 @@ for (c1='p'; c1 < 's'; c1++)
 
 }
 
-DestroyString(Buffer);
+DestroyString(Tempstr);
 return(0);
 }
 

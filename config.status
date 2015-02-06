@@ -318,7 +318,7 @@ Copyright (C) 2006 Free Software Foundation, Inc.
 This config.status script is free software; the Free Software Foundation
 gives unlimited permission to copy, distribute and modify it."
 
-ac_pwd='/home/meta/Crayonizer-0.7'
+ac_pwd='/home/meta/Crayonizer-0.8'
 srcdir='.'
 INSTALL='/bin/install -c'
 # If no file are specified by the user, then we need to provide default

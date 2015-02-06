@@ -27,6 +27,7 @@ tzset();
 val=StrLen(DateFormat)+ DATE_BUFF_LEN;
 Buffer=SetStrLen(Buffer,val);
 strftime(Buffer,val,DateFormat,TMS);
+printf("GDSFS: %s %d %s\n",Buffer,val,DateFormat);
 
 DestroyString(Tempstr);
 return(Buffer);

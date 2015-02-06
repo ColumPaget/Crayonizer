@@ -9,10 +9,17 @@
 #define TRUE 1
 #endif
 
+#define __LIBUSEFUL_VERSION__ "2.0"
+#define __LIBUSEFUL_BUILD_DATE__ __DATE__ 
+#define __LIBUSEFUL_BUILD_TIME__ __TIME__ 
+
+//__TIME__
+
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <stdio.h>
+#include "memory.h"
 #include "socket.h"
 #include "unix_socket.h"
 #include "string.h"
@@ -27,16 +34,18 @@
 #include "ConnectManager.h"
 #include "Hash.h"
 #include "Compression.h"
-#include "sound.h"
-#include "pty.h"
-#include "Log.h"
-#include "http.h"
-#include "oauth.h"
 #include "Time.h"
 #include "Vars.h"
 #include "Markup.h"
 #include "MathExpr.h"
 #include "PatternMatch.h"
 #include "SpawnPrograms.h"
+#include "sound.h"
+#include "pty.h"
+#include "Log.h"
+#include "http.h"
+#include "oauth.h"
+#include "tar.h"
+#include "ansi.h"
 
 #endif

@@ -9,7 +9,8 @@ DESTDIR=
 FLAGS=$(CFLAGS) -DPACKAGE_NAME=\"\" -DPACKAGE_TARNAME=\"\" -DPACKAGE_VERSION=\"\" -DPACKAGE_STRING=\"\" -DPACKAGE_BUGREPORT=\"\" -DSTDC_HEADERS=1 -DHAVE_LIBZ=1
 
 
-OBJ=common.o config_file.o help.o crayonizations.o
+
+OBJ=common.o config_file.o help.o crayonizations.o status_bar.o ansi.o
 
 all: $(OBJ) main.c common.h
 	@cd libUseful-2.0; $(MAKE)
@@ -27,10 +28,17 @@ crayonizations.o: crayonizations.c crayonizations.h common.h
 help.o: help.c help.h common.h
 	gcc -c help.c
 
+ansi.o: ansi.c ansi.h common.h
+	gcc -c ansi.c
+
+status_bar.o: status_bar.c status_bar.h common.h
+	gcc -c status_bar.c
+
 clean:
 	@rm -f crayonizer *.o libUseful-2.0/*.o libUseful-2.0/*.a libUseful-2.0/*.so
 
 install:
 	$(INSTALL) -d $(DESTDIR)$(bindir)
 	$(INSTALL) crayonizer $(DESTDIR)$(bindir)
+
 

@@ -26,7 +26,7 @@
 #define CLRSCR "\x1b[2J\x1b[;H"
 #define CTRLO 15
 
-char *Version="0.0.7";
+char *Version="0.0.8";
 int GlobalFlags=0;
 TCrayon *KeyPresses=NULL;
 int NoOfKeyPresses=0;
@@ -42,6 +42,7 @@ void HandleSigwinch(STREAM *Pipe)
 
 		ScreenRows=w.ws_row;
 		if (GlobalFlags & HAS_STATUSBAR) w.ws_row--;	
+		w.ws_row--;	
     ioctl(Pipe->out_fd, TIOCSWINSZ, &w);
 		
 
@@ -297,7 +298,7 @@ Curr=ListGetNext(Crayons);
 while (Curr)
 {
 	Item=(TCrayon *) Curr->Item;
-	if (Item->Type==CRAYON_STATUSBAR) DrawStatusBar("TASK BAR");
+	if (Item->Type==CRAYON_STATUSBAR) DrawStatusBar(Item->String);
 
 	if (
 			(Item->Type==Type) || (Item->Type==CRAYON_IF) || (Item->Type==CRAYON_ARGS) 
@@ -405,46 +406,22 @@ return(Pipe);
 }
 
 
-//Currently only reads Title
-void XTermReadValue()
-{
-char *Tempstr=NULL, *ptr;
-STREAM *StdIn;
-
-StdIn=STREAMFromFD(0);
-STREAMSetTimeout(StdIn,1);
-Tempstr=CopyStr(Tempstr,"\x1b[21;t");
-write(1,Tempstr,StrLen(Tempstr));
-Tempstr=STREAMReadToTerminator(Tempstr,StdIn,'\\');
-if (StrLen(Tempstr))
-{
-	ptr=Tempstr+StrLen(Tempstr)-2;
-	if (strcmp(ptr,"\x1b\\")==0) *ptr='\0';
-	ptr=Tempstr;
-	if (strncmp(ptr,"\x1b]l",3)==0) ptr+=3;
-	if (StrLen(ptr)) SetVar(Vars,"OldXtermTitle",ptr);
-}
-
-STREAMDisassociateFromFD(StdIn);
-DestroyString(Tempstr);
-}
-
-
-void LoadConfig(char *CmdLine, char **CrayonizerDir, ListNode *ColorMatches)
+char *LoadConfig(char *CmdLine, char **CrayonizerDir, ListNode *ColorMatches)
 {
 int i;
 char *Tempstr=NULL;
 
 Tempstr=MCopyStr(Tempstr,GetCurrUserHomeDir(),"/",USER_CONFIG_FILE,NULL);
-if (! ConfigReadFile(Tempstr, CmdLine, CrayonizerDir, ColorMatches))
+if (! ConfigReadFile(Tempstr, &CmdLine, CrayonizerDir, ColorMatches))
 {
-	if (! ConfigReadFile(GLOBAL_CONFIG_FILE, CmdLine, CrayonizerDir, ColorMatches))
+	if (! ConfigReadFile(GLOBAL_CONFIG_FILE, &CmdLine, CrayonizerDir, ColorMatches))
 	{
 		printf("ERROR! Crayonizer can't find config file. Tried %s and %s\n",Tempstr, GLOBAL_CONFIG_FILE);
 		exit(1);
 	}
 }
 
+return(CmdLine);
 }
 
 
@@ -493,7 +470,7 @@ ColorMatches=ListCreate();
 for (i=0; i < argc; i++) CmdLine=MCatStr(CmdLine,argv[i]," ",NULL);
 StripTrailingWhitespace(CmdLine);
 
-LoadConfig(CmdLine, &CrayonizerDir, ColorMatches);
+CmdLine=LoadConfig(CmdLine, &CrayonizerDir, ColorMatches);
 
 if (! StrLen(CrayonizerDir))
 {

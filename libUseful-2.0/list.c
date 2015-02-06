@@ -1,6 +1,8 @@
 #include "includes.h"
 
 
+
+
 ListNode *ListGetHead(ListNode *Node)
 {
 if (! Node) return(NULL);
@@ -23,6 +25,13 @@ return(*intptr);
 }
 
 
+void ListSetFlags(ListNode *List, int Flags)
+{
+ListNode *Head;
+
+Head=ListGetHead(List);
+Head->Flags=Flags;
+}
 
 
 int ListSetNoOfItems(ListNode *LastItem, int val)
@@ -476,6 +485,8 @@ if (! Item2) return;
 Prev=Item1->Prev;
 Next=Item2->Next;
 Head=ListGetHead(Item1);
+if (Head==Item1) return;
+if (Head==Item2) return;
 
 if (Head->Next==Item1) Head->Next=Item2;
 if (Prev) Prev->Next=Item2;
@@ -556,11 +567,29 @@ while (Curr)
 {
    if (Curr->Jump)
    {
-		result=strcasecmp(Curr->Jump->Tag,Name);
+		if (Head->Flags & LIST_FLAG_CASE) result=strcmp(Curr->Jump->Tag,Name);
+		else result=strcasecmp(Curr->Jump->Tag,Name);
 		if (result < 0) Curr=Curr->Jump;
    }
-   if (Curr->Tag && (strcasecmp(Curr->Tag,Name)==0)) return(Curr);
-   Curr=ListGetNext(Curr);
+
+	if (Curr->Tag)
+	{
+  	if (Head->Flags & LIST_FLAG_CASE)
+		{
+			if (strcmp(Curr->Tag,Name)==0) 
+			{
+				if (Head->Flags & LIST_FLAG_SELFORG) ListSwapItems(Curr->Prev, Curr);
+				return(Curr);
+			}
+		}
+  	else if (strcasecmp(Curr->Tag,Name)==0) 
+		{
+				if (Head->Flags & LIST_FLAG_SELFORG) ListSwapItems(Curr->Prev, Curr);
+			return(Curr);
+		}
+	}
+
+  Curr=ListGetNext(Curr);
 }
 return(Curr);
 }
@@ -576,8 +605,12 @@ if (! Item) return(NULL);
 Curr=ListGetNext(Head);
 while (Curr)
 {
-   if (Curr->Item==Item) return(Curr);
-   Curr=ListGetNext(Curr);
+	if (Curr->Item==Item) 
+	{
+		if (Head->Flags & LIST_FLAG_SELFORG) ListSwapItems(Curr->Prev, Curr);
+		return(Curr);
+	}
+	Curr=ListGetNext(Curr);
 }
 return(Curr);
 }
@@ -601,13 +634,6 @@ while (Curr)
 if (Curr->Jump)
 {
 	if (Curr->Jump==Node) Curr->Jump=NULL;
-	/*
-	if (strcmp(Curr->Jump->Tag,Node->Tag) > -1)
-	{
-		Curr=Curr->Jump;
-		continue;
-	}
-	*/
 }
 
 Curr=ListGetNext(Curr);

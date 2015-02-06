@@ -1,72 +1,8 @@
 #include "crayonizations.h"
+#include "ansi.h"
 
-#define NORM "\x1b[0m"
-#define CLRSCR "\x1b[2J\x1b[;H"
 
 void ProcessCrayonization(STREAM *Pipe, char *Line, int Len, int *Attribs, TCrayon *Crayon);
-
-
-
-char *VtCode(int Color, int BgColor, int Flags)
-{
-static char *ANSI=NULL;
-int FgVal, BgVal;
-
-if ((! Color) && (! Flags)) return("");
-
-if ( (Color > 0) && (BgColor > 0) )
-{	
-	//Bg colors are set into the higher byte of 'attribs', so that we can hold both fg and bg in the
-	//same int, so we must shift them down
-	BgColor=BgColor >> 8;
-
-	if (Color >= DARKGREY) FgVal=90+Color-DARKGREY;
-	else FgVal=30+Color-1;
-	
-		if (BgColor >= DARKGREY) BgVal=100+BgColor-DARKGREY;
-	else BgVal=40+BgColor-1;
-	
-	ANSI=FormatStr(ANSI,"\x1b[%d;%d",FgVal,BgVal);
-	if (Flags) ANSI=CatStr(ANSI,";");
-}
-else if (Color > 0) 
-{
-	if (Color >= DARKGREY) FgVal=90+Color-DARKGREY;
-	else FgVal=30+Color-1;
-	
-	ANSI=FormatStr(ANSI,"\x1b[%d",FgVal);
-	if (Flags) ANSI=CatStr(ANSI,";");
-}
-else ANSI=CopyStr(ANSI,"\x1b[");
-
-if (Flags)
-{
-	if (Flags & FLAG_BOLD) ANSI=CatStr(ANSI,"01");
-	if (Flags & FLAG_FAINT) ANSI=CatStr(ANSI,"02");
-	if (Flags & FLAG_UNDER) ANSI=CatStr(ANSI,"04");
-	if (Flags & FLAG_BLINK) ANSI=CatStr(ANSI,"05");
-	if (Flags & FLAG_INVERSE) ANSI=CatStr(ANSI,"07");
-}
-ANSI=CatStr(ANSI,"m");
-
-return(ANSI);
-}
-
-void DrawStatusBar(const char *Text)
-{
-char *ANSI=NULL;
-
-if (ScreenRows==0) return;
-
-	ANSI=FormatStr(ANSI,"\x1b[%d;0H\x1b[K",ScreenRows);
-	ANSI=MCatStr(ANSI, VtCode(BLUE, BLUE, FLAG_INVERSE), Text, NORM, NULL);
-
-	write(1,ANSI,StrLen(ANSI));
-
-DestroyString(ANSI);
-}
-
-
 
 int HandleCrayonIf(TCrayon *Crayon)
 {

@@ -366,7 +366,7 @@ NoOfKeyPresses++;
 
 
 
-void ConfigReadEntry(STREAM *S, ListNode *ColorMatches)
+void ConfigReadEntry(STREAM *S, char **CommandLine, ListNode *ColorMatches)
 {
 char *Tempstr=NULL, *Token=NULL, *ptr;
 TCrayon *Crayon=NULL, *CLS, *Action;
@@ -386,6 +386,7 @@ ListNode *Curr;
 			else if (strcasecmp(Token,"stripansi")==0) GlobalFlags |= FLAG_STRIP_ANSI;
 			else if (strcasecmp(Token,"expectlines")==0) GlobalFlags |= FLAG_EXPECT_LINES;
 			else if (strcasecmp(Token,"keypress")==0) ParseKeypress(ptr);
+			else if (strcasecmp(Token,"command")==0) *CommandLine=CopyStr(*CommandLine,ptr);
 			else if (Crayon && (strcmp(Token,"{")==0)) ParseCrayonList(S,Crayon);
 			else
 			{
@@ -411,6 +412,7 @@ ListNode *Curr;
 
 DestroyString(Tempstr);
 DestroyString(Token);
+
 }
 
 
@@ -448,7 +450,7 @@ return(result);
 
 
 
-int ConfigReadFile(char *Path, char *CommandLine, char **CrayonizerDir, ListNode *ColorMatches)
+int ConfigReadFile(char *Path, char **CommandLine, char **CrayonizerDir, ListNode *ColorMatches)
 {
 STREAM *S;
 char *Tempstr=NULL, *Token=NULL, *ptr;
@@ -458,7 +460,7 @@ char *ProgName=NULL, *Args;
 S=STREAMOpenFile(Path,O_RDONLY);
 if (! S) return(FALSE);
 
-Args=GetToken(CommandLine," ",&ProgName,0);
+Args=GetToken(*CommandLine," ",&ProgName,0);
 Tempstr=STREAMReadLine(Tempstr,S);
 while (Tempstr)
 {
@@ -471,9 +473,9 @@ while (Tempstr)
 		ptr=GetToken(ptr,"\\S",&Token,0);
 		if (EntryMatchesCommand(Token,ptr,ProgName, Args))
 		{
-			ConfigReadEntry(S,ColorMatches);
+			ConfigReadEntry(S, CommandLine,ColorMatches);
 		}
-		else ConfigReadEntry(S,NULL);
+		else ConfigReadEntry(S,NULL,NULL);
 
 	}
 	if (strcasecmp(Token,"include")==0) ConfigReadFile(ptr, CommandLine, CrayonizerDir, ColorMatches);
