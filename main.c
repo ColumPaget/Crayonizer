@@ -19,6 +19,7 @@
 
 #include "common.h"
 #include "config_file.h"
+#include "keypress.h"
 #include "help.h"
 #include <sys/ioctl.h>
 
@@ -26,10 +27,8 @@
 #define CLRSCR "\x1b[2J\x1b[;H"
 #define CTRLO 15
 
-char *Version="0.0.8";
+char *Version="0.0.9";
 int GlobalFlags=0;
-TCrayon *KeyPresses=NULL;
-int NoOfKeyPresses=0;
 int StartTime=0;
 
 
@@ -41,10 +40,13 @@ void HandleSigwinch(STREAM *Pipe)
     ioctl(0, TIOCGWINSZ, &w);
 
 		ScreenRows=w.ws_row;
-		if (GlobalFlags & HAS_STATUSBAR) w.ws_row--;	
-		w.ws_row--;	
+		if (GlobalFlags & HAS_STATUSBAR) SetupStatusBars();
+		else
+		{
+//		w.ws_row--;	
+
     ioctl(Pipe->out_fd, TIOCSWINSZ, &w);
-		
+		}
 
 		DestroyString(Tempstr);
 }
@@ -73,37 +75,6 @@ if (GlobalFlags & GOT_SIGWINCH)
 if (GlobalFlags & GOT_SIGTERM) kill(PeerPID,SIGTERM);
 if (GlobalFlags & GOT_SIGINT) kill(PeerPID,SIGINT);
 GlobalFlags &= ~(GOT_SIGWINCH | GOT_SIGTERM | GOT_SIGINT);
-}
-
-
-int HandleStdin(STREAM *StdIn, STREAM *Out)
-{
-int result, i;
-char *Tempstr=NULL;
-
-Tempstr=SetStrLen(Tempstr,4096);
-result=STREAMReadBytes(StdIn,Tempstr,4096);
-if (result > 0) 
-{
-	for (i=0; i < NoOfKeyPresses; i++)
-	{
-		if (strcmp(KeyPresses[i].Match,Tempstr)==0) 
-		{
-			ApplyActions(Out,NULL, NULL, 0, NULL, NULL, KeyPresses+i); 
-			break;
-		}
-	}
-
-
-	if (i==NoOfKeyPresses)
-	{
-	STREAMWriteBytes(Out,Tempstr,result);
-	STREAMFlush(Out);
-	}
-}
-
-DestroyString(Tempstr);
-return(result);
 }
 
 
@@ -293,12 +264,12 @@ int *Attribs=NULL;
 
 if (Type==CRAYON_PREPEND) GlobalFlags |= FLAG_DOING_PREPENDS;
 if (Type==CRAYON_APPEND) GlobalFlags |= FLAG_DOING_APPENDS;
+if (GlobalFlags & HAS_STATUSBAR) SetupStatusBars();
 
 Curr=ListGetNext(Crayons);
 while (Curr)
 {
 	Item=(TCrayon *) Curr->Item;
-	if (Item->Type==CRAYON_STATUSBAR) DrawStatusBar(Item->String);
 
 	if (
 			(Item->Type==Type) || (Item->Type==CRAYON_IF) || (Item->Type==CRAYON_ARGS) 
@@ -343,9 +314,12 @@ while (Curr)
 
 char *RebuildCommandLine(char *RetStr, int argc, char *argv[])
 {
-char *CommandLine=NULL, *Quoted=NULL;
+char *CommandLine=NULL, *Quoted=NULL, *ptr;
 int i;
 
+
+ptr=GetVar(Vars, "ReplaceCommand");
+if (StrLen(ptr)) return(CopyStr(RetStr,ptr));
 
 CommandLine=MCopyStr(RetStr, argv[0]," ",GetVar(Vars,"ExtraCmdLineOptions")," ",NULL);
 for (i=1; i < argc; i++)
@@ -406,22 +380,21 @@ return(Pipe);
 }
 
 
-char *LoadConfig(char *CmdLine, char **CrayonizerDir, ListNode *ColorMatches)
+void LoadConfig(const char *CmdLine, char **CrayonizerDir, ListNode *ColorMatches)
 {
 int i;
 char *Tempstr=NULL;
 
 Tempstr=MCopyStr(Tempstr,GetCurrUserHomeDir(),"/",USER_CONFIG_FILE,NULL);
-if (! ConfigReadFile(Tempstr, &CmdLine, CrayonizerDir, ColorMatches))
+if (! ConfigReadFile(Tempstr, CmdLine, CrayonizerDir, ColorMatches))
 {
-	if (! ConfigReadFile(GLOBAL_CONFIG_FILE, &CmdLine, CrayonizerDir, ColorMatches))
+	if (! ConfigReadFile(GLOBAL_CONFIG_FILE, CmdLine, CrayonizerDir, ColorMatches))
 	{
 		printf("ERROR! Crayonizer can't find config file. Tried %s and %s\n",Tempstr, GLOBAL_CONFIG_FILE);
 		exit(1);
 	}
 }
 
-return(CmdLine);
 }
 
 
@@ -447,7 +420,6 @@ void LoadEnvironment()
 char *Token=NULL, *ptr;
 int i;
 
-Vars=ListCreate();
 for (i=0; environ[i] !=NULL; i++)
 {
 ptr=GetToken(environ[i],"=",&Token,0);
@@ -458,6 +430,9 @@ DestroyString(Token);
 }
 
 
+
+
+
 //Spawns a command, reads text from it and 'Crayonizes' it
 void CrayonizeCommand(int argc, char *argv[])
 {
@@ -465,12 +440,13 @@ STREAM *StdIn=NULL, *Pipe=NULL, *S;
 char *Tempstr=NULL, *CrayonizerDir=NULL, *CmdLine=NULL;
 ListNode *ColorMatches, *Streams;
 int val, i, result;
+struct timeval tv;
 
 ColorMatches=ListCreate();
 for (i=0; i < argc; i++) CmdLine=MCatStr(CmdLine,argv[i]," ",NULL);
 StripTrailingWhitespace(CmdLine);
 
-CmdLine=LoadConfig(CmdLine, &CrayonizerDir, ColorMatches);
+LoadConfig(CmdLine, &CrayonizerDir, ColorMatches);
 
 if (! StrLen(CrayonizerDir))
 {
@@ -494,9 +470,6 @@ if (! ListSize(ColorMatches)) GlobalFlags |=FLAG_DONTCRAYON;
 Streams=ListCreate();
 
 
-//if we are going to restore the title at the end, then we need to set it here
-//if (GlobalFlags & FLAG_RESTORE_XTITLE) XTermReadValue();
-
 
 ProcessCmdLine(CmdLine, ColorMatches);
 ProcessAppends(Pipe, ColorMatches,CRAYON_PREPEND);
@@ -505,7 +478,7 @@ ProcessAppends(Pipe, ColorMatches,CRAYON_PREPEND);
 Pipe=LaunchCommands(argc, argv, ColorMatches);
 
 
-if (GlobalFlags & FLAG_PASSINPUT)
+if (KeypressFlags & KEYPRESS_PASSINPUT)
 {
 	InitTTY(0, 0,TTYFLAG_LFCR|TTYFLAG_IGNSIG);
 	StdIn=STREAMFromFD(0);
@@ -517,15 +490,18 @@ ListAddItem(Streams,Pipe);
 
 while (1)
 {
-	S=STREAMSelect(Streams,NULL);
+	tv.tv_sec=1;
+	tv.tv_usec=0;
+	S=STREAMSelect(Streams,&tv);
 
 	if (S)
 	{
-		if (S==StdIn) result=HandleStdin(StdIn,Pipe);
+		if (S==StdIn) result=KeypressProcess(StdIn,Pipe);
 		else result=ColorProgramOutput(Pipe, ColorMatches);
 
-		if (result < 0) break;
+		if (result == STREAM_CLOSED) break;
 	}
+	else UpdateStatusBars();
 	PropogateSignals(Pipe);
 }
 wait(&val);
@@ -536,7 +512,6 @@ ProcessAppends(Pipe,ColorMatches,CRAYON_APPEND);
 
 STREAMClose(Pipe);
 STREAMDisassociateFromFD(StdIn);
-ResetTTY(0);
 ListDestroy(Streams,NULL);
 ListDestroy(ColorMatches,free);
 DestroyString(Tempstr);
@@ -629,6 +604,127 @@ if (new_argc > 0) CrayonizeCommand(new_argc,new_argv);
 
 
 
+void CrayonizerGetEnvironment()
+{
+char *Tempstr=NULL, *ptr;
+int val;
+
+//if we are going to restore the title at the end, then we need to set it here
+/*
+if (GlobalFlags & FLAG_RESTORE_XTITLE) 
+{
+	Tempstr=XTermReadValue(Tempstr, "\x1b[21;t", "\x1b]l");
+  if (StrLen(Tempstr)) SetVar(Vars,"OldXtermTitle",Tempstr);
+}
+*/
+
+Tempstr=CopyStr(Tempstr,getenv("TERM"));
+if (StrLen(Tempstr)) SetVar(Vars,"TERM",Tempstr);
+
+if (strcmp(Tempstr,"linux")==0)
+{
+					SetVar(Vars,"BACKCOLOR","black");
+					SetVar(Vars,"BACKTONE","dark");
+}
+else if (strncmp(Tempstr,"xterm",5)==0)
+{
+					SetVar(Vars,"BACKCOLOR","black");
+					SetVar(Vars,"BACKTONE","dark");
+}
+else if (strncmp(Tempstr,"rxvt",4)==0)
+{
+					SetVar(Vars,"BACKCOLOR","white");
+					SetVar(Vars,"BACKTONE","light");
+}
+
+Tempstr=CopyStr(Tempstr,getenv("COLORFGBG"));
+
+if (StrLen(Tempstr)) 
+{
+			ptr=strchr(Tempstr,';');
+			if (ptr) 
+			{
+				*ptr='\0';
+				ptr++;
+				SetVar(Vars,"COLORFG",Tempstr);
+
+/*
+	ANSI	 terminfo equivalent	 Description
+[ 4 0 m	setab 0	 Set background to color #0 - black
+[ 4 1 m	setab 1	 Set background to color #1 - red
+[ 4 2 m	setab 2	 Set background to color #2 - green
+[ 4 3 m	setab 3	 Set background to color #3 - yellow
+[ 4 4 m	setab 4	 Set background to color #4 - blue
+[ 4 5 m	setab 5	 Set background to color #5 - magenta
+[ 4 6 m	setab 6	 Set background to color #6 - cyan
+[ 4 7 m	setab 7	 Set background to color #7 - white
+*/
+
+				switch (atoi(ptr))
+				{
+					case 0:
+					case 8:
+					SetVar(Vars,"BACKCOLOR","black");
+					SetVar(Vars,"BACKTONE","dark");
+					break;
+
+					case 1:
+					case 9:
+					SetVar(Vars,"BACKCOLOR","red");
+					SetVar(Vars,"BACKTONE","dark");
+					break;
+
+					case 2:
+					case 10:
+					SetVar(Vars,"BACKCOLOR","green");
+					SetVar(Vars,"BACKTONE","dark");
+					break;
+
+					case 3:
+					case 11:
+					SetVar(Vars,"BACKCOLOR","yellow");
+					SetVar(Vars,"BACKTONE","light");
+					break;
+
+					case 4:
+					case 12:
+					SetVar(Vars,"BACKCOLOR","blue");
+					SetVar(Vars,"BACKTONE","dark");
+					break;
+
+					case 5:
+					case 13:
+					SetVar(Vars,"BACKCOLOR","magenta");
+					SetVar(Vars,"BACKTONE","light");
+					break;
+
+					case 6:
+					case 14:
+					SetVar(Vars,"BACKCOLOR","cyan");
+					SetVar(Vars,"BACKTONE","light");
+					break;
+
+					case 7:
+					case 15:
+					SetVar(Vars,"BACKCOLOR","white");
+					SetVar(Vars,"BACKTONE","light");
+					break;
+				}
+			}
+}
+
+
+/*
+printf("TERM: %s\n",GetVar(Vars,"TERM"));
+printf("BGC:: %s\n",GetVar(Vars,"BACKCOLOR"));
+printf("BGTT: %s\n",GetVar(Vars,"BACKTONE"));
+*/
+
+DestroyString(Tempstr);
+}
+
+
+
 main(int argc, char *argv[])
 {
 char *ptr;
@@ -636,7 +732,9 @@ char *ptr;
 cmdline_argc=argc;
 cmdline_argv=argv;
 
+Vars=ListCreate();
 time(&StartTime);
+CrayonizerGetEnvironment();
 
 if (strcmp(basename(argv[0]),"crayonizer")==0) CalledAsSelf(argc, argv);
 else 
@@ -645,4 +743,5 @@ else
 	argv[0]=ptr;
 	CrayonizeCommand(argc,argv);
 }
+ResetTTY(0);
 }

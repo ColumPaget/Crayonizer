@@ -1,7 +1,9 @@
 #include "config_file.h"
+#include "keypress.h"
+#include "status_bar.h"
 
-char *Colors[]={"none","black","red","green","yellow","blue","magenta","cyan","white","none","none","darkgrey","lightred","lightgreen","lightyellow","lightblue","lightmagenta","lightcyan",NULL};
-char *CrayonTypes[]={"action","args","line","string","section","lineno","value","mapto","linemapto","append","prepend","exec","cmdline","passinput","include","keypress","if","statusbar",NULL};
+const char *Colors[]={"none","black","red","green","yellow","blue","magenta","cyan","white","none","none","darkgrey","lightred","lightgreen","lightyellow","lightblue","lightmagenta","lightcyan","lightgrey",NULL};
+const char *CrayonTypes[]={"action","args","line","string","section","lineno","value","mapto","linemapto","append","prepend","exec","cmdline","passinput","include","keypress","if","statusbar","edit",NULL};
 
 
 int CrayonType(char *String)
@@ -55,7 +57,47 @@ return(Act);
 
 
 //This parses those actions that take a string
-int ParseStringAction(char *Line, int Type, TCrayon *Crayon)
+char *ParseStringAction(char *Line, int Type, TCrayon *Crayon)
+{
+	TCrayon *Action;
+	char *Token=NULL, *ptr, *sptr;
+
+		ptr=GetToken(Line," ",&Token,GETTOKEN_QUOTES);
+
+		Action=NewCrayonAction(Crayon,Type);
+		
+		for (sptr=Token; *sptr != '\0'; sptr++)
+		{
+			if (*sptr=='\\')
+			{
+				sptr++;
+				switch (*sptr)
+				{
+					case 'a': Action->String=AddCharToStr(Action->String,0x07); break;
+					case 'b': Action->String=AddCharToStr(Action->String,0x08); break;
+					case 'c': 
+						sptr++;
+						if ((*sptr > 64) && (*sptr < 91)) Action->String=AddCharToStr(Action->String,*sptr-64);
+						if ((*sptr > 96) && (*sptr < 123)) Action->String=AddCharToStr(Action->String,*sptr-96);
+					break;
+					case 'n': Action->String=AddCharToStr(Action->String,'\n'); break;
+					case 'r': Action->String=AddCharToStr(Action->String,'\r'); break;
+					case 't': Action->String=AddCharToStr(Action->String,'	'); break;
+					default: Action->String=AddCharToStr(Action->String, *sptr); break;
+				}
+			}
+			else Action->String=AddCharToStr(Action->String, *sptr);
+		}
+
+
+		DestroyString(Token);
+
+return(ptr);
+}
+
+
+//This parses those actions that take a string
+char *ParseEditAction(char *Line, int Type, TCrayon *Crayon)
 {
 	TCrayon *Action;
 	char *Token=NULL, *ptr;
@@ -63,9 +105,19 @@ int ParseStringAction(char *Line, int Type, TCrayon *Crayon)
 		ptr=GetToken(Line," ",&Token,GETTOKEN_QUOTES);
 
 		Action=NewCrayonAction(Crayon,Type);
-		Action->String=CopyStr(Action->String,Token);
+		if (strcasecmp(Token,"Prev")==0) Action->Attribs=SB_EDIT_PREV;
+		if (strcasecmp(Token,"Next")==0) Action->Attribs=SB_EDIT_NEXT;
+		if (strcasecmp(Token,"Left")==0) Action->Attribs=SB_EDIT_LEFT;
+		if (strcasecmp(Token,"Right")==0) Action->Attribs=SB_EDIT_RIGHT;
+		if (strcasecmp(Token,"Delete")==0) Action->Attribs=SB_EDIT_DELETE;
+		if (strcasecmp(Token,"Backspace")==0) Action->Attribs=SB_EDIT_BACKSPACE;
+		if (strcasecmp(Token,"Clear")==0) Action->Attribs=SB_EDIT_CLEAR;
+		if (strcasecmp(Token,"Enter")==0) Action->Attribs=SB_EDIT_ENTER;
+		if (strcasecmp(Token,"off")==0) Action->Attribs=SB_EDIT_OFF;
+		if (strcasecmp(Token,"on")==0) Action->Attribs=SB_EDIT_ON;
+		if (strcasecmp(Token,"toggle")==0) Action->Attribs=SB_EDIT_TOGGLE;
 
-
+	fprintf(stderr,"DIT: [%s] %d\n",Token,SB_EDIT_TOGGLE);
 		DestroyString(Token);
 
 return(ptr);
@@ -93,12 +145,18 @@ int val=0;
 	else if (strcasecmp(Token,"clrtoeol")==0) (*Action)->Attribs |= FLAG_CLR2EOL;
 	else if (strcasecmp(Token,"basename")==0) *Action=NewCrayonAction(Crayon, ACTION_BASENAME);
 	else if (strcasecmp(Token,"setxtitle")==0) *Action=NewCrayonAction(Crayon, ACTION_SET_XTITLE);
+	else if (strcasecmp(Token,"fontup")==0) *Action=NewCrayonAction(Crayon, ACTION_FONT_UP);
+	else if (strcasecmp(Token,"fontdown")==0) *Action=NewCrayonAction(Crayon, ACTION_FONT_DOWN);
 	else if (strcasecmp(Token,"cls")==0) *Action=NewCrayonAction(Crayon, ACTION_CLEARSCREEN);
 	else if (strcasecmp(Token,"clearscreen")==0) *Action=NewCrayonAction(Crayon, ACTION_CLEARSCREEN);
 	else if (strcasecmp(Token,"restorextitle")==0) 
 	{
 		*Action=NewCrayonAction(Crayon, ACTION_RESTORE_XTITLE);
 		GlobalFlags |= FLAG_RESTORE_XTITLE;
+	}
+	else if (strcasecmp(Token,"replace")==0) 
+	{
+		ptr=ParseStringAction(ptr,ACTION_REPLACE,Crayon);
 	}
 	else if (strcasecmp(Token,"setstr")==0) 
 	{
@@ -111,6 +169,10 @@ int val=0;
 	else if (strcasecmp(Token,"send")==0) 
 	{
 		ptr=ParseStringAction(ptr,ACTION_SEND,Crayon);
+	}
+	else if (strcasecmp(Token,"bell")==0) 
+	{
+		ptr=ParseStringAction(ptr,ACTION_BELL,Crayon);
 	}
 	else if (strcasecmp(Token,"playsound")==0) 
 	{
@@ -167,11 +229,14 @@ int val=0;
 	{
 		ptr=ParseStringAction(ptr,ACTION_ARGS,Crayon);
 	}
+	else if (strcasecmp(Token,"edit")==0) 
+	{
+		ptr=ParseEditAction(ptr, ACTION_EDIT, Crayon);
+	}
 	else if (strcasecmp(Token,"dontcrayon")==0) 
 	{
 		*Action=NewCrayonAction(Crayon, ACTION_DONTCRAYON);
 	}
-
 	else (*Action)->Attribs |= ParseColor(Token);
 
 
@@ -285,11 +350,15 @@ void ParseCrayonEntry(TCrayon *Crayon, char *Token, char *Args)
 	{
 	case CRAYON_STATUSBAR:
 		GlobalFlags |= HAS_STATUSBAR;
-		Crayon->String=CopyStr(Crayon->String,Args); 
+		ParseStatusBar(Args);
 	break;
 
 	case CRAYON_ARGS: 
 		Crayon->String=CopyStr(Crayon->String,Args); 
+	break;
+	
+	case CRAYON_ACTION:
+		ParseCrayonAction(Crayon, ptr);
 	break;
 
 	default:
@@ -319,9 +388,13 @@ TCrayon *SubItem;
 		if (strcmp(Token,"}")==0) break;
 		
 		if (strcmp(Token,"{")==0) ParseCrayonList(S, SubItem);
-		else SubItem=NewCrayonAction(Crayon, 0);
-		ParseCrayonEntry(SubItem, Token,ptr);
-		
+		else if (CrayonType(Token) == CRAYON_ACTION) ParseCrayonAction(Crayon, Tempstr);
+		else
+		{
+			SubItem=NewCrayonAction(Crayon, 0);
+			ParseCrayonEntry(SubItem, Token,ptr);
+		}
+
 	Tempstr=STREAMReadLine(Tempstr,S);
 	}
 
@@ -330,43 +403,9 @@ DestroyString(Token);
 }
 
 
-void ParseKeypress(char *Name)
-{
-TCrayon *KP;
-char *ptr;
 
 
-if ((NoOfKeyPresses % 10)==0) 
-{
-	KeyPresses=(TCrayon *) realloc((void *) KeyPresses, (NoOfKeyPresses+10) * sizeof(TCrayon));
-}
-
-KP=KeyPresses + NoOfKeyPresses;
-memset(KP,0,sizeof(TCrayon));
-KP->Match=SetStrLen(NULL,2);
-ptr=Name;
-
-if 
-	(
-		(strncasecmp(ptr,"ctrl",4)==0)
-)
-{
-	ptr+=4;
-	if (ispunct(*ptr)) ptr++;
-	KP->Match[0]=toupper(*ptr)-64;
-}
-else KP->Match[0]=*ptr;
-
-ptr++;
-
-ParseActionToken(ptr,KP);
-
-NoOfKeyPresses++;
-}
-
-
-
-void ConfigReadEntry(STREAM *S, char **CommandLine, ListNode *ColorMatches)
+void ConfigReadEntry(STREAM *S, ListNode *ColorMatches)
 {
 char *Tempstr=NULL, *Token=NULL, *ptr;
 TCrayon *Crayon=NULL, *CLS, *Action;
@@ -382,11 +421,12 @@ ListNode *Curr;
 		if (strcmp(Token,"}")==0) break;
 		else if (ColorMatches)
 		{
-			if (strcasecmp(Token,"passinput")==0) GlobalFlags |= FLAG_PASSINPUT;
-			else if (strcasecmp(Token,"stripansi")==0) GlobalFlags |= FLAG_STRIP_ANSI;
+			if (strcasecmp(Token,"passinput")==0) KeypressFlags |=  KEYPRESS_PASSINPUT;
+			else if (strcasecmp(Token,"lineedit")==0) KeypressFlags |= KEYPRESS_LINEDIT;
 			else if (strcasecmp(Token,"expectlines")==0) GlobalFlags |= FLAG_EXPECT_LINES;
-			else if (strcasecmp(Token,"keypress")==0) ParseKeypress(ptr);
-			else if (strcasecmp(Token,"command")==0) *CommandLine=CopyStr(*CommandLine,ptr);
+			else if (strcasecmp(Token,"keypress")==0) KeypressParse(ptr);
+			else if (strcasecmp(Token,"stripansi")==0) GlobalFlags |= FLAG_STRIP_ANSI;
+			else if (strcasecmp(Token,"command")==0) SetVar(Vars,"ReplaceCommand",ptr);
 			else if (Crayon && (strcmp(Token,"{")==0)) ParseCrayonList(S,Crayon);
 			else
 			{
@@ -450,7 +490,7 @@ return(result);
 
 
 
-int ConfigReadFile(char *Path, char **CommandLine, char **CrayonizerDir, ListNode *ColorMatches)
+int ConfigReadFile(const char *Path, const char *CommandLine, char **CrayonizerDir, ListNode *ColorMatches)
 {
 STREAM *S;
 char *Tempstr=NULL, *Token=NULL, *ptr;
@@ -460,7 +500,7 @@ char *ProgName=NULL, *Args;
 S=STREAMOpenFile(Path,O_RDONLY);
 if (! S) return(FALSE);
 
-Args=GetToken(*CommandLine," ",&ProgName,0);
+Args=GetToken(CommandLine," ",&ProgName,0);
 Tempstr=STREAMReadLine(Tempstr,S);
 while (Tempstr)
 {
@@ -473,9 +513,9 @@ while (Tempstr)
 		ptr=GetToken(ptr,"\\S",&Token,0);
 		if (EntryMatchesCommand(Token,ptr,ProgName, Args))
 		{
-			ConfigReadEntry(S, CommandLine,ColorMatches);
+			ConfigReadEntry(S, ColorMatches);
 		}
-		else ConfigReadEntry(S,NULL,NULL);
+		else ConfigReadEntry(S, NULL);
 
 	}
 	if (strcasecmp(Token,"include")==0) ConfigReadFile(ptr, CommandLine, CrayonizerDir, ColorMatches);

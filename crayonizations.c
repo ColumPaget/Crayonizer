@@ -1,8 +1,13 @@
 #include "crayonizations.h"
-#include "ansi.h"
+#include "xterm.h"
+#include "status_bar.h"
 
 
-void ProcessCrayonization(STREAM *Pipe, char *Line, int Len, int *Attribs, TCrayon *Crayon);
+int ProcessCrayonization(STREAM *Pipe, char *Line, int Len, int *Attribs, TCrayon *Crayon);
+
+
+
+
 
 int HandleCrayonIf(TCrayon *Crayon)
 {
@@ -11,10 +16,11 @@ int result=FALSE, val, i;
 
 	Expr=SubstituteVarsInString(Expr,Crayon->Match,Vars,0);
 
-	ptr=GetToken(Expr,"\\S",&Token,0);
+
+	ptr=GetToken(Expr,"\\S",&Token,GETTOKEN_QUOTES);
 	while (ptr)
 	{
-		switch (Token[0])
+		switch (*Token)
 		{
 			case 'a':
 				result=FALSE;
@@ -39,6 +45,8 @@ int result=FALSE, val, i;
 					}
 				}
 			break;
+
+
 
 			case 'l':
 				result=FALSE;
@@ -103,12 +111,12 @@ int result=FALSE, val, i;
 			case '<':
 				if (*(ptr+1) == '=')
 				{
-					ptr=GetToken(ptr,"\\S",&Token,0);
+					ptr=GetToken(ptr,"\\S",&Token,GETTOKEN_QUOTES);
 					result=(atoi(PrevToken) <= atoi(Token));
 				}
 				else
 				{
-				ptr=GetToken(ptr,"\\S",&Token,0);
+				ptr=GetToken(ptr,"\\S",&Token,GETTOKEN_QUOTES);
 				result=(atoi(PrevToken) < atoi(Token));
 				}
 			break;
@@ -116,33 +124,33 @@ int result=FALSE, val, i;
 			case '>':
 				if (*(ptr+1) == '=')
 				{
-					ptr=GetToken(ptr,"\\S",&Token,0);
+					ptr=GetToken(ptr,"\\S",&Token,GETTOKEN_QUOTES);
 					result=(atoi(PrevToken) >= atoi(Token));
 				}
 				else
 				{
-					ptr=GetToken(ptr,"\\S",&Token,0);
+					ptr=GetToken(ptr,"\\S",&Token,GETTOKEN_QUOTES);
 					result=(atoi(PrevToken) > atoi(Token));
 				}
 			break;
 
 
 			case '=':
-				ptr=GetToken(ptr,"\\S",&Token,0);
-				if (strcasecmp(PrevToken, Token)==0) result=TRUE;
+				ptr=GetToken(ptr,"\\S",&Token,GETTOKEN_QUOTES);
+				result=pmatch(Token, PrevToken, StrLen(PrevToken), NULL, 0);
+				if (result > 0) result=TRUE;
 				else result=FALSE;
 			break;
-
 
 			case '!':
-				ptr=GetToken(ptr,"\\S",&Token,0);
-				if (strcasecmp(PrevToken, Token)==0) result=TRUE;
-				else result=FALSE;
+				ptr=GetToken(ptr,"\\S",&Token,GETTOKEN_QUOTES);
+				result=pmatch(Token, PrevToken, StrLen(PrevToken), NULL, 0);
+				if (result > 0) result=FALSE;
+				else result=TRUE;
 			break;
-
 		}
 		PrevToken=CopyStr(PrevToken,Token);
-		ptr=GetToken(ptr,"\\S",&Token,0);
+		ptr=GetToken(ptr,"\\S",&Token,GETTOKEN_QUOTES);
 	}
 
 
@@ -152,6 +160,9 @@ DestroyString(Token);
 DestroyString(Expr);
 return(result);
 }
+
+
+
 
 int CrayonMatches(TCrayon *Crayon, char *sptr, char *eptr)
 {
@@ -210,6 +221,10 @@ case CRAYON_LINENO:
 
 	switch (*ptr)
 	{
+		case '*':
+		result=TRUE;
+		break;
+
 		case '>':
 		ptr++;
 		pos1=strtol(ptr,NULL,10);
@@ -353,6 +368,20 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 			write(1,Tempstr,StrLen(Tempstr));
 		break;
 
+		case ACTION_FONT_UP:
+			Tempstr=CopyStr(Tempstr,"\x1b[?35h\x1b]50;#+1\x07");
+			write(1,Tempstr,StrLen(Tempstr));
+		break;
+
+		case ACTION_FONT_DOWN:
+			Tempstr=CopyStr(Tempstr,"\x1b[?35h\x1b]50;#-1\x07");
+			write(1,Tempstr,StrLen(Tempstr));
+		break;
+
+		case ACTION_REPLACE:
+		strcpy(MatchStart,Action->String);
+		break;
+
 		case ACTION_SETENV:
 			ptr=strchr(Action->String,'=');
 			if (ptr) 
@@ -363,7 +392,9 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 			else
 			{
 				EnvName=CopyStr(EnvName,Action->String);
-				Tempstr=CopyStrLen(Tempstr,MatchStart,end-start);
+				//end points to last character in match, not character after it
+				//so we must +1 to len
+				Tempstr=CopyStrLen(Tempstr,MatchStart,(end-start)+1);
 			}
 			StripTrailingWhitespace(Tempstr);
 			setenv(EnvName,Tempstr,TRUE);
@@ -400,11 +431,6 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 			write(1,Tempstr,StrLen(Tempstr));
 		break;
 
-		case ACTION_REDRAW:
-			DrawStatusBar("REDRAW");
-			exit(1);
-		break;
-
 		case ACTION_ALTSCREEN:
 			write(1,"\x1b[?47h",6); 
 		break;
@@ -413,6 +439,10 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 			write(1,"\x1b[?47l",6); 
 		break;
 		
+		case ACTION_BELL:
+			write(1,"\x07",1);
+		break;
+
 		case ACTION_XTERM_FGCOLOR:
 			EnvName=SubstituteVarsInString(EnvName,Action->String,Vars,0);
 			Tempstr=MCopyStr(Tempstr,"\x1b]10;",EnvName,"\007",NULL);
@@ -443,6 +473,9 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 			write(1,CLRSCR,StrLen(CLRSCR)); 
 		break;
 
+		case ACTION_EDIT:
+			StatusBarHandleInput(Pipe, NULL, Action->Attribs);
+		break;
 
 		case ACTION_DONTCRAYON:
 			//use '=' not '|=' here because we don't want it to honor
@@ -483,6 +516,7 @@ switch (Crayon->Type)
 	case CRAYON_STRING:
 	case CRAYON_MAPTO:
 	case CRAYON_SECTION:
+	case CRAYON_IF:
 		return(TRUE);	
 	break;
 }
@@ -491,13 +525,14 @@ return(FALSE);
 }
 
 
-void ProcessActionAndSubactions(STREAM *Pipe, int *AttribLine, char *Line, int Len, char *MatchStart, char *MatchEnd, TCrayon *Crayon)
+int ProcessActionAndSubactions(STREAM *Pipe, int *AttribLine, char *Line, int Len, char *MatchStart, char *MatchEnd, TCrayon *Crayon)
 {
-int i;
+int i, result=FALSE;
 
 		if (CrayonMatches(Crayon, MatchStart,MatchEnd)) 
 		{
 			ApplySingleAction(Pipe,AttribLine, Line, Len, MatchStart, MatchEnd, Crayon);
+			result=TRUE;
 			for (i=0; i < Crayon->ActionCount; i++)
 			{
 				if (IsMatchType(&Crayon->Actions[i]))
@@ -507,6 +542,7 @@ int i;
 				else ApplyActions(Pipe, AttribLine, Line, Len, MatchStart, MatchEnd, &Crayon->Actions[i]);
 			}
 		}
+	return(result);
 }
 
 //This function handles action types that involve adding lines of text to the output,
@@ -530,12 +566,13 @@ char *Tempstr=NULL;
 }
 
 
-void ApplyActions(STREAM *Pipe, int *AttribLine, char *Line, int Len, char *MatchStart, char *MatchEnd, TCrayon *Crayon)
+int ApplyActions(STREAM *Pipe, int *AttribLine, char *Line, int Len, char *MatchStart, char *MatchEnd, TCrayon *Crayon)
 {
 int i,sum=0;
 char *ptr;
+int result=0;
 
-if (GlobalFlags & FLAG_DONTCRAYON) return;
+if (GlobalFlags & FLAG_DONTCRAYON) return(FALSE);
 
 
 	//for map to we must calculate which attribute to use
@@ -547,24 +584,42 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 		{
 		for (ptr=MatchStart; ptr < MatchEnd; ptr++) sum+=*ptr;
 		ApplySingleAction(Pipe, AttribLine, Line, Len, MatchStart, MatchEnd, &Crayon->Actions[sum % Crayon->ActionCount]);
+		result=TRUE;
 		}
 	break;
 
 	case CRAYON_APPEND:
-		if (GlobalFlags & FLAG_DOING_APPENDS) AppendTextAction(Pipe, Crayon);
+		if (GlobalFlags & FLAG_DOING_APPENDS) 
+		{
+			AppendTextAction(Pipe, Crayon);
+			result=TRUE;
+		}
 	break;
 
 	case CRAYON_PREPEND:
-		if (GlobalFlags & FLAG_DOING_PREPENDS) AppendTextAction(Pipe, Crayon);
+		if (GlobalFlags & FLAG_DOING_PREPENDS) 
+		{
+			AppendTextAction(Pipe, Crayon);
+			result=TRUE;
+		}
 	break;
 
+	//Key presses will already have been matched
+	case CRAYON_KEYPRESS:
+	for (i=0; i < Crayon->ActionCount; i++)
+	{
+		ApplySingleAction(Pipe, AttribLine, Line, Len, MatchStart, MatchEnd, &Crayon->Actions[i]);
+		result=TRUE;
+	}
+	break;
 
 	default:
-    ProcessActionAndSubactions(Pipe, AttribLine, Line, Len, MatchStart, MatchEnd, Crayon);
+    result=ProcessActionAndSubactions(Pipe, AttribLine, Line, Len, MatchStart, MatchEnd, Crayon);
 	break;
 
 	}
 
+return(result);
 }
 
 
@@ -595,7 +650,7 @@ TPMatch *Match;
 
 void OutputLineWithAttributes(char *Line, int *Attribs, int Len)
 {
-int i, LastAttrib=0;
+int i, LastAttrib=0, BgAttr;
 char *Tempstr=NULL;
 
 if (! Attribs) return;
@@ -606,7 +661,12 @@ for (i=0; i < Len; i++)
 	if (Attribs[i] != LastAttrib) 
 	{
 		Tempstr=CatStr(Tempstr,NORM);
-		if (Attribs[i] > 0) Tempstr=CatStr(Tempstr,VtCode(Attribs[i] & 0x00FF, Attribs[i] & 0xFF00, Attribs[i] & 0xFF0000));
+
+		//Bg colors are set into the higher byte of 'attribs', so that we 
+		//can hold both fg and bg in the same int, thus we must shift them down
+		BgAttr=(Attribs[i] & 0xFF00) >> 8;
+
+		if (Attribs[i] > 0) Tempstr=CatStr(Tempstr,ANSICode(Attribs[i] & 0x00FF, BgAttr, Attribs[i] & 0xFF0000));
 		LastAttrib=Attribs[i];
 	}
 	if (LastAttrib & FLAG_CAPS) Tempstr=AddCharToStr(Tempstr,toupper(Line[i]));
@@ -621,19 +681,25 @@ DestroyString(Tempstr);
 }
 
 
-void ProcessCrayonization(STREAM *Pipe, char *Line, int Len, int *Attribs, TCrayon *Crayon)
+int ProcessCrayonization(STREAM *Pipe, char *Line, int Len, int *Attribs, TCrayon *Crayon)
 {
  char *p_SectionStart, *p_SectionEnd, *ptr;
+ int result=FALSE;
 
 	switch (Crayon->Type)
 	{
 	case CRAYON_LINE:
 	case CRAYON_LINEMAPTO:
-	if (pmatch(Crayon->Match,Line,Len,NULL,PMATCH_SUBSTR) > 0) ApplyActions(Pipe, Attribs, Line, Len, Line, Line+Len, Crayon);
+	if (pmatch(Crayon->Match,Line,Len,NULL,PMATCH_SUBSTR) > 0) 
+	{
+		result=ApplyActions(Pipe, Attribs, Line, Len, Line, Line+Len, Crayon);
+	}
 	break;
 
+
+	case CRAYON_IF:
 	case CRAYON_LINENO:
-	ApplyActions(Pipe, Attribs, Line, Len, Line, Line+Len, Crayon);
+	result=ApplyActions(Pipe, Attribs, Line, Len, Line, Line+Len, Crayon);
 	break;
 
 	case CRAYON_SECTION:
@@ -646,7 +712,7 @@ void ProcessCrayonization(STREAM *Pipe, char *Line, int Len, int *Attribs, TCray
 	//if the section command has a match string, then call 'ColorSubstring' to get that looked at
 	//else call 'ApplyActions' to apply any action list to this section of text
 	if (StrLen(Crayon->Match)) ColorSubstring(Pipe, Attribs+Crayon->Start, p_SectionStart, p_SectionEnd-p_SectionStart, Crayon);
-	else ApplyActions(Pipe, Attribs+Crayon->Start, p_SectionStart, p_SectionEnd-p_SectionStart, p_SectionStart, p_SectionEnd, Crayon);
+	else result=ApplyActions(Pipe, Attribs+Crayon->Start, p_SectionStart, p_SectionEnd-p_SectionStart, p_SectionStart, p_SectionEnd, Crayon);
 	break;
 
 
@@ -657,8 +723,7 @@ void ProcessCrayonization(STREAM *Pipe, char *Line, int Len, int *Attribs, TCray
 	break;
 	}
 
-
-
+return(result);
 }
 
 
