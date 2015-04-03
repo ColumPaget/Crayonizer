@@ -1,11 +1,34 @@
-#include "crayonizations.h"
 #include "xterm.h"
 #include "status_bar.h"
+#include "crayonizations.h"
 
 
 int ProcessCrayonization(STREAM *Pipe, char *Line, int Len, int *Attribs, TCrayon *Crayon);
 
 
+
+int IsInStringList(char *Item, char *List, char *Separator) 
+{
+char *Token=NULL, *ptr;
+int result=FALSE;
+
+ptr=GetToken(List,Separator,&Token,GETTOKEN_QUOTES);
+while (ptr)
+{
+	StripLeadingWhitespace(Token);
+	StripTrailingWhitespace(Token);
+	if (pmatch(Token, Item, StrLen(Item), NULL, 0) > 0)
+	{
+		result=TRUE;
+		break;
+	}
+ptr=GetToken(ptr,Separator,&Token,GETTOKEN_QUOTES);
+}
+
+DestroyString(Token);
+
+return(result);
+}
 
 
 
@@ -83,7 +106,12 @@ int result=FALSE, val, i;
 			break;
 
 			case 'i':
-				if (strncmp(Token,"isatty(",7)==0)
+				if (strcmp(Token,"in")==0)
+				{
+					ptr=GetToken(ptr,"\\S",&Token,GETTOKEN_QUOTES);
+					if (IsInStringList(PrevToken,Token,",")) result=TRUE;
+				}
+				else if (strncmp(Token,"isatty(",7)==0)
 				{
 					Tempstr=CopyStr(Tempstr,Token+7);
 					tptr=strrchr(Tempstr,')');
