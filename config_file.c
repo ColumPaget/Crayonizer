@@ -3,7 +3,24 @@
 #include "status_bar.h"
 
 const char *Colors[]={"none","black","red","green","yellow","blue","magenta","cyan","white","none","none","darkgrey","lightred","lightgreen","lightyellow","lightblue","lightmagenta","lightcyan","lightgrey",NULL};
-const char *CrayonTypes[]={"action","args","line","string","section","lineno","value","mapto","linemapto","append","prepend","exec","cmdline","passinput","include","keypress","if","statusbar","edit",NULL};
+const char *CrayonTypes[]={"action","args","line","string","section","lineno","value","mapto","linemapto","append","prepend","cmdline","passinput","include","keypress","if","statusbar","edit",NULL};
+
+
+//only used by 'IsAttrib'
+#define FLAG_COLOR 1
+
+int IsAttrib(const char *String)
+{
+const char *AttribStrings[]={"caps","bold","hide","blink","uppercase","underline","lowercase","inverse",NULL};
+int AttribFlags[]={FLAG_CAPS, FLAG_BOLD, FLAG_HIDE, FLAG_BLINK, FLAG_CAPS, FLAG_UNDER, FLAG_LOWERCASE, FLAG_INVERSE};
+int val;
+
+val=MatchTokenFromList(String,AttribStrings,0);
+if (val > -1) return(AttribFlags[val]);
+
+return(ParseColor(String));
+}
+
 
 
 int CrayonType(char *String)
@@ -117,12 +134,31 @@ char *ParseEditAction(char *Line, int Type, TCrayon *Crayon)
 		if (strcasecmp(Token,"on")==0) Action->Attribs=SB_EDIT_ON;
 		if (strcasecmp(Token,"toggle")==0) Action->Attribs=SB_EDIT_TOGGLE;
 
-	fprintf(stderr,"DIT: [%s] %d\n",Token,SB_EDIT_TOGGLE);
 		DestroyString(Token);
 
 return(ptr);
 }
 
+
+void ParseStatusBar(int Type, TCrayon *Crayon, TCrayon **Action, char *Config)
+{
+char *Token=NULL, *ptr;
+int val;
+
+		*Action=NewCrayonAction(Crayon, Type);
+		ptr=GetToken(Config,"\\S",&Token,GETTOKEN_QUOTES);
+		while (ptr)
+		{
+		  val=IsAttrib(Token);
+			if (! val) break;
+			ptr=GetToken(ptr,"\\S",&Token,GETTOKEN_QUOTES);
+		}
+		(*Action)->Match=CopyStr((*Action)->Match, Token);
+		ptr=GetToken(ptr,"\\S",&Token,GETTOKEN_QUOTES);
+		(*Action)->String=CopyStr((*Action)->String, Token);
+
+		DestroyString(Token);
+}
 
 
 char *ParseAttribs(char *Verbs, TCrayon *Crayon, TCrayon **Action)
@@ -131,17 +167,12 @@ char *Token=NULL, *ptr;
 int val=0;
  
 //Do this before anything else!
-
 	ptr=GetToken(Verbs," ",&Token,0);
 
-	if (strcasecmp(Token,"caps")==0) (*Action)->Attribs |= FLAG_CAPS;
-	else if (strcasecmp(Token,"bold")==0) (*Action)->Attribs |= FLAG_BOLD;
-	else if (strcasecmp(Token,"hide")==0) (*Action)->Attribs |= FLAG_HIDE;
-	else if (strcasecmp(Token,"blink")==0) (*Action)->Attribs |= FLAG_BLINK;
-	else if (strcasecmp(Token,"uppercase")==0) (*Action)->Attribs |= FLAG_CAPS;
-	else if (strcasecmp(Token,"underline")==0) (*Action)->Attribs |= FLAG_UNDER;
-	else if (strcasecmp(Token,"lowercase")==0) (*Action)->Attribs |= FLAG_LOWERCASE;
-	else if (strcasecmp(Token,"inverse")==0) (*Action)->Attribs |= FLAG_INVERSE;
+	val=IsAttrib(Token);
+	//Is Attrib actually returns attribs, so if it's >0 we can use it to set
+	//attribs
+	if (val) (*Action)->Attribs |= val;
 	else if (strcasecmp(Token,"clrtoeol")==0) (*Action)->Attribs |= FLAG_CLR2EOL;
 	else if (strcasecmp(Token,"basename")==0) *Action=NewCrayonAction(Crayon, ACTION_BASENAME);
 	else if (strcasecmp(Token,"setxtitle")==0) *Action=NewCrayonAction(Crayon, ACTION_SET_XTITLE);
@@ -237,9 +268,8 @@ int val=0;
 	{
 		*Action=NewCrayonAction(Crayon, ACTION_DONTCRAYON);
 	}
-	else (*Action)->Attribs |= ParseColor(Token);
-
-
+	else if (strcasecmp(Token,"querybar")==0) ParseStatusBar(ACTION_QUERYBAR, Crayon, Action, ptr);
+	else if (strcasecmp(Token,"selectbar")==0) ParseStatusBar(ACTION_SELECTBAR, Crayon, Action, ptr);
 
 DestroyString(Token);
 return(ptr);
@@ -249,19 +279,20 @@ return(ptr);
 
 // Token will either be a test (with an operation like '<' '=' etc) or a list of
 // actions (colors, uppercase) to apply
-void ParseActionToken(char *Operations, TCrayon *Crayon)
+char *ParseActionToken(char *Operations, TCrayon *Crayon)
 {
 char *Token=NULL, *ptr, *nptr;
 TCrayon *Action=NULL;
 int val=0;
  
 //Do this before anything else!
-
 ptr=Operations;
+
 Action=NewCrayonAction(Crayon,0);
 while (StrLen(ptr))
 {		
 	nptr=GetToken(ptr," ",&Token,0);
+
 		switch (*Token)
 		{
 			case '=':
@@ -282,13 +313,15 @@ while (StrLen(ptr))
 }
 
 DestroyString(Token);
+
+return(ptr);
 }
 
 
 
 
 
-void ParseCrayonAction(TCrayon *Item, char *Args)
+char *ParseCrayonAction(TCrayon *Item, char *Args)
 {
 char *Token=NULL, *ptr, *ptr2;
 
@@ -301,10 +334,10 @@ switch (Item->Type)
 	case CRAYON_APPEND:
 	case CRAYON_PREPEND:
 	case CRAYON_VALUE:
-	case CRAYON_EXEC:
 	case CRAYON_CMDLINE:
 	case CRAYON_IF:
-		ParseActionToken(Args, Item);
+	case CRAYON_KEYPRESS:
+		ptr=ParseActionToken(Args, Item);
 	break;
 
 	case CRAYON_SECTION:
@@ -313,7 +346,7 @@ switch (Item->Type)
 		Item->Len=strtol(ptr2,NULL,10) - Item->Start;
 
 		ptr=GetToken(Args,"\\S",&Item->Match,GETTOKEN_QUOTES);
-		ParseActionToken(ptr, Item);
+		ptr=ParseActionToken(ptr, Item);
 	break;
 
 
@@ -322,7 +355,7 @@ switch (Item->Type)
 	ptr=GetToken(Args,"\\S",&Token,GETTOKEN_QUOTES);
 	while (ptr)
 	{
-		ParseActionToken(Token, Item);
+		ptr=ParseActionToken(Token, Item);
 		ptr=GetToken(ptr,"\\S",&Token,GETTOKEN_QUOTES);
 	}
 	break;
@@ -330,7 +363,7 @@ switch (Item->Type)
 
 DestroyString(Token);
 
-return(Item);
+return(ptr);
 }
 
 
@@ -350,7 +383,7 @@ void ParseCrayonEntry(TCrayon *Crayon, char *Token, char *Args)
 	{
 	case CRAYON_STATUSBAR:
 		GlobalFlags |= HAS_STATUSBAR;
-		ParseStatusBar(Args);
+		//ParseStatusBar(Args);
 	break;
 
 	case CRAYON_ARGS: 
@@ -384,6 +417,7 @@ TCrayon *SubItem;
 	{
 		StripTrailingWhitespace(Tempstr);
 		StripLeadingWhitespace(Tempstr);
+
 		ptr=GetToken(Tempstr,"\\S",&Token,0);
 		if (strcmp(Token,"}")==0) break;
 		
@@ -424,10 +458,16 @@ ListNode *Curr;
 			if (strcasecmp(Token,"passinput")==0) KeypressFlags |=  KEYPRESS_PASSINPUT;
 			else if (strcasecmp(Token,"lineedit")==0) KeypressFlags |= KEYPRESS_LINEDIT;
 			else if (strcasecmp(Token,"expectlines")==0) GlobalFlags |= FLAG_EXPECT_LINES;
-			else if (strcasecmp(Token,"keypress")==0) KeypressParse(ptr);
+			else if (strcasecmp(Token,"keypress")==0) Crayon=KeypressParse(ptr);
 			else if (strcasecmp(Token,"stripansi")==0) GlobalFlags |= FLAG_STRIP_ANSI;
 			else if (strcasecmp(Token,"command")==0) SetVar(Vars,"ReplaceCommand",ptr);
-			else if (Crayon && (strcmp(Token,"{")==0)) ParseCrayonList(S,Crayon);
+			else if(strcmp(Token,"{")==0) 
+			{
+				if (Crayon)
+				{
+					ParseCrayonList(S,Crayon);
+				}
+			}
 			else
 			{
 		 		Crayon=(TCrayon *) calloc(1,sizeof(TCrayon));
@@ -531,4 +571,46 @@ return(TRUE);
 }
 
 
+int ConfigLoad(const char *CmdLine, char **CrayonizerDir, ListNode *ColorMatches)
+{
+char *Paths[]={"$(UserCrayonizerDir)/$(Command).conf","$(UserDir)/.crayonizer.conf","$(SystemCrayonizerDir)/$(Command).conf","$(SystemConfigDir)/crayonizer.conf",NULL};
+int RetVal=FALSE;
+
+char *Tempstr=NULL, *UserDir=NULL;
+ListNode *Vars;
+int i;
+
+
+Vars=ListCreate();
+SetVar(Vars,"SystemConfigDir","/etc");
+SetVar(Vars,"SystemCrayonizerDir","/etc/crayonizer");
+GetToken(CmdLine," ",&Tempstr,0);
+SetVar(Vars,"Command",Tempstr);
+UserDir=CopyStr(UserDir,GetCurrUserHomeDir());
+SetVar(Vars,"UserDir",UserDir);
+Tempstr=MCopyStr(Tempstr,UserDir,"/.crayonizer",NULL);
+SetVar(Vars,"UserCrayonizerDir",Tempstr);
+
+
+for (i=0; Paths[i] !=NULL; i++)
+{
+Tempstr=SubstituteVarsInString(Tempstr,Paths[i],Vars,0);
+if (ConfigReadFile(Tempstr, CmdLine, CrayonizerDir, ColorMatches))
+{
+	RetVal=TRUE;
+	break;
+}
+}
+
+
+if (! RetVal)
+{
+	printf("ERROR! Crayonizer can't find config file.\n");
+	exit(1);
+}
+
+DestroyString(Tempstr);
+DestroyString(UserDir);
+return(RetVal);
+}
 

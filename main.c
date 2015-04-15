@@ -29,7 +29,7 @@
 
 char *Version="0.0.9";
 int GlobalFlags=0;
-int StartTime=0;
+time_t StartTime=0;
 
 
 void HandleSigwinch(STREAM *Pipe)
@@ -324,12 +324,11 @@ if (StrLen(ptr)) return(CopyStr(RetStr,ptr));
 CommandLine=MCopyStr(RetStr, argv[0]," ",GetVar(Vars,"ExtraCmdLineOptions")," ",NULL);
 for (i=1; i < argc; i++)
 {
-	Quoted=QuoteCharsInStr(Quoted,argv[i]," 	&|");
+	Quoted=QuoteCharsInStr(Quoted,argv[i]," 	()");
 	CommandLine=MCatStr(CommandLine,Quoted," ",NULL);
 }
 
 return(CommandLine);
-return(Quoted);
 }
 
 
@@ -349,11 +348,13 @@ while (Curr)
 {
 Crayon=(TCrayon *) Curr->Item;
 
+/*
 if (Crayon->Type==CRAYON_EXEC) 
 {
 	if (StrLen(Tempstr)) Tempstr=MCatStr(Tempstr,";",Crayon->Match,NULL);
 	else Tempstr=CopyStr(Tempstr,Crayon->Match);
 }
+*/
 
 Curr=ListGetNext(Curr);
 }
@@ -379,23 +380,6 @@ DestroyString(Tempstr);
 return(Pipe);
 }
 
-
-void LoadConfig(const char *CmdLine, char **CrayonizerDir, ListNode *ColorMatches)
-{
-int i;
-char *Tempstr=NULL;
-
-Tempstr=MCopyStr(Tempstr,GetCurrUserHomeDir(),"/",USER_CONFIG_FILE,NULL);
-if (! ConfigReadFile(Tempstr, CmdLine, CrayonizerDir, ColorMatches))
-{
-	if (! ConfigReadFile(GLOBAL_CONFIG_FILE, CmdLine, CrayonizerDir, ColorMatches))
-	{
-		printf("ERROR! Crayonizer can't find config file. Tried %s and %s\n",Tempstr, GLOBAL_CONFIG_FILE);
-		exit(1);
-	}
-}
-
-}
 
 
 char *RebuildPath(char *RetStr, char *Path, char *CurrDir)
@@ -431,22 +415,44 @@ DestroyString(Token);
 
 
 
+void CrayonizerProcessInputs()
+{
+struct timeval tv;
+STREAM *S;
+int result;
+
+while (1)
+{
+  tv.tv_sec=1;
+  tv.tv_usec=0;
+  S=STREAMSelect(Streams,&tv);
+
+  if (S)
+  {
+    if (S==StdIn) result=KeypressProcess(StdIn,CommandPipe);
+    else result=ColorProgramOutput(CommandPipe, ColorMatches);
+
+    if (result == STREAM_CLOSED) break;
+  }
+  else UpdateStatusBars();
+  PropogateSignals(CommandPipe);
+}
+}
+
 
 
 //Spawns a command, reads text from it and 'Crayonizes' it
 void CrayonizeCommand(int argc, char *argv[])
 {
-STREAM *StdIn=NULL, *Pipe=NULL, *S;
+STREAM *S;
 char *Tempstr=NULL, *CrayonizerDir=NULL, *CmdLine=NULL;
-ListNode *ColorMatches, *Streams;
 int val, i, result;
-struct timeval tv;
 
 ColorMatches=ListCreate();
 for (i=0; i < argc; i++) CmdLine=MCatStr(CmdLine,argv[i]," ",NULL);
 StripTrailingWhitespace(CmdLine);
 
-LoadConfig(CmdLine, &CrayonizerDir, ColorMatches);
+ConfigLoad(CmdLine, &CrayonizerDir, ColorMatches);
 
 if (! StrLen(CrayonizerDir))
 {
@@ -472,10 +478,10 @@ Streams=ListCreate();
 
 
 ProcessCmdLine(CmdLine, ColorMatches);
-ProcessAppends(Pipe, ColorMatches,CRAYON_PREPEND);
+ProcessAppends(NULL, ColorMatches,CRAYON_PREPEND);
 
 
-Pipe=LaunchCommands(argc, argv, ColorMatches);
+CommandPipe=LaunchCommands(argc, argv, ColorMatches);
 
 
 if (KeypressFlags & KEYPRESS_PASSINPUT)
@@ -486,31 +492,15 @@ if (KeypressFlags & KEYPRESS_PASSINPUT)
 }
 
 
-ListAddItem(Streams,Pipe);
-
-while (1)
-{
-	tv.tv_sec=1;
-	tv.tv_usec=0;
-	S=STREAMSelect(Streams,&tv);
-
-	if (S)
-	{
-		if (S==StdIn) result=KeypressProcess(StdIn,Pipe);
-		else result=ColorProgramOutput(Pipe, ColorMatches);
-
-		if (result == STREAM_CLOSED) break;
-	}
-	else UpdateStatusBars();
-	PropogateSignals(Pipe);
-}
+ListAddItem(Streams,CommandPipe);
+CrayonizerProcessInputs();
 wait(&val);
 
 Tempstr=FormatStr(Tempstr,"%d",time(NULL) - StartTime);
 SetVar(Vars,"duration",Tempstr);
-ProcessAppends(Pipe,ColorMatches,CRAYON_APPEND);
+ProcessAppends(CommandPipe,ColorMatches,CRAYON_APPEND);
 
-STREAMClose(Pipe);
+STREAMClose(CommandPipe);
 STREAMDisassociateFromFD(StdIn);
 ListDestroy(Streams,NULL);
 ListDestroy(ColorMatches,free);
@@ -523,14 +513,13 @@ DestroyString(CrayonizerDir);
 
 void CrayonizeSTDIN(int argc, char *argv[])
 {
-STREAM *StdIn=NULL;
 char *Tempstr=NULL, *CrayonizerDir=NULL, *CmdLine=NULL;
 ListNode *ColorMatches;
 int val, i;
 
 ColorMatches=ListCreate();
 for (i=0; i < argc; i++) CmdLine=MCatStr(CmdLine,argv[i]," ",NULL);
-LoadConfig(CmdLine, &CrayonizerDir, ColorMatches);
+ConfigLoad(CmdLine, &CrayonizerDir, ColorMatches);
 
 StdIn=STREAMFromFD(0);
 

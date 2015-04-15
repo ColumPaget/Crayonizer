@@ -35,7 +35,7 @@ keypress.o: keypress.c keypress.h common.h
 	gcc -c keypress.c
 
 status_bar.o: status_bar.c status_bar.h common.h
-	gcc -c status_bar.c
+	gcc -g -c status_bar.c
 
 clean:
 	@rm -f crayonizer *.o libUseful-2.1/*.o libUseful-2.1/*.a libUseful-2.1/*.so

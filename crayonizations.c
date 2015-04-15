@@ -213,7 +213,6 @@ case CRAYON_LINEMAPTO:
 case CRAYON_APPEND: 
 case CRAYON_PREPEND: 
 case CRAYON_PASSINPUT: 
-case CRAYON_EXEC: 
 case CRAYON_CMDLINE: 
 case CRAYON_VALUE: 
 	return(TRUE);
@@ -316,7 +315,9 @@ ListAddItem(Streams,CmdErr);
 Tempstr=SetStrLen(Tempstr,4096);
 STREAMFlush(Pipe);
 
-write(CmdS->out_fd,ActivateLine,StrLen(ActivateLine));
+if (StrLen(ActivateLine)) write(CmdS->out_fd,ActivateLine,StrLen(ActivateLine));
+write(1,"\n",1);
+
 while (1)
 {
 	S=STREAMSelect(Streams,NULL);
@@ -441,6 +442,7 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 
 		case ACTION_EXEC:
 			Tempstr=SubstituteVarsInString(Tempstr,Action->String,Vars,0);
+			PassToProgram(StdIn, NULL, Tempstr);
 		break;
 
 		case ACTION_PASSTO:
@@ -502,13 +504,21 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 		break;
 
 		case ACTION_EDIT:
-			StatusBarHandleInput(Pipe, NULL, Action->Attribs);
+			//StatusBarHandleInput(Pipe, NULL, Action->Attribs);
 		break;
 
 		case ACTION_DONTCRAYON:
 			//use '=' not '|=' here because we don't want it to honor
 			//any other flags
 			GlobalFlags = FLAG_DONTCRAYON;
+		break;
+
+		case ACTION_QUERYBAR:
+			QueryBar(Action->Match, Action->String, Action->Attribs);
+		break;
+
+		case ACTION_SELECTBAR:
+			SelectionBar(Action->Match, Action->String, Action->Attribs);
 		break;
 		}
 
