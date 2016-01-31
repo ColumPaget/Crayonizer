@@ -10,11 +10,11 @@ FLAGS=$(CFLAGS) @DEFS@
 
 
 
-OBJ=common.o config_file.o help.o crayonizations.o status_bar.o xterm.o keypress.o
+OBJ=common.o config_file.o help.o crayonizations.o text_substitutions.o status_bar.o xterm.o keypress.o signals.o
 
 all: $(OBJ) main.c common.h
-	@cd libUseful-2.1; $(MAKE)
-	$(CC) $(FLAGS) -o crayonizer main.c $(LIBS) $(OBJ) libUseful-2.1/libUseful-2.1.a 
+	@cd libUseful-2.3; $(MAKE)
+	$(CC) $(FLAGS) -o crayonizer main.c $(LIBS) $(OBJ) libUseful-2.3/libUseful-2.3.a 
 
 config_file.o: config_file.c config_file.h common.h
 	gcc -c config_file.c
@@ -34,11 +34,17 @@ xterm.o: xterm.c xterm.h common.h
 keypress.o: keypress.c keypress.h common.h
 	gcc -c keypress.c
 
+signals.o: signals.c signals.h common.h
+	gcc -c signals.c
+
+text_substitutions.o: text_substitutions.c text_substitutions.h common.h
+	gcc -c text_substitutions.c
+
 status_bar.o: status_bar.c status_bar.h common.h
 	gcc -c status_bar.c
 
 clean:
-	@rm -f crayonizer *.o libUseful-2.1/*.o libUseful-2.1/*.a libUseful-2.1/*.so
+	@rm -f crayonizer *.o libUseful-2.3/*.o libUseful-2.3/*.a libUseful-2.3/*.so
 
 install:
 	$(INSTALL) -d $(DESTDIR)$(bindir)

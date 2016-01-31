@@ -1,6 +1,6 @@
 //Crayonizer. A coloration/formatting app for command-line output
 //Written by Colum Paget.
-//Copyright 2013 Colum Paget.
+//Copyright 2.33 Colum Paget.
 
 /****  Gnu Public Licence ****/
 /*
@@ -20,8 +20,8 @@
 #include "common.h"
 #include "config_file.h"
 #include "keypress.h"
+#include "signals.h"
 #include "help.h"
-#include <sys/ioctl.h>
 
 #define NORM "\x1b[0m"
 #define CLRSCR "\x1b[2J\x1b[;H"
@@ -32,121 +32,131 @@ int GlobalFlags=0;
 time_t StartTime=0;
 
 
-void HandleSigwinch(STREAM *Pipe)
+
+//This handles ANSI sequences that start ESC[, these are 'Control Sequence Introducer' (CSI) codes 
+//Some of these we need to detect, becuase the clear the screen or such
+char *HandleCSI(char *ptr, char *end)
 {
-    struct winsize w;
-		char *Tempstr=NULL;
+int val, AtEnd=FALSE;
 
-    ioctl(0, TIOCGWINSZ, &w);
-
-		ScreenRows=w.ws_row;
-		if (GlobalFlags & HAS_STATUSBAR) SetupStatusBars();
-		else
+	//special case, some xterm commands
+	if (*ptr=='?')
+	{
+		ptr++;
+		if (strncmp(ptr, "47h", 3)==0)
 		{
-//		w.ws_row--;	
-
-    ioctl(Pipe->out_fd, TIOCSWINSZ, &w);
+			GlobalFlags |= FLAG_ALTERNATE_SCREEN;
+			return(ptr+3);
 		}
+		else if (strncmp(ptr, "47l", 3)==0)
+		{
+			GlobalFlags &= ~FLAG_ALTERNATE_SCREEN;
+			GlobalFlags |= FLAG_REDRAW;
+			return(ptr+3);
+		}
+		else if (strncmp(ptr, "1049h", 5)==0)
+		{
+			GlobalFlags |= FLAG_ALTERNATE_SCREEN;
+			return(ptr+5);
+		}
+		else if (strncmp(ptr, "1049l", 5)==0)
+		{
+			GlobalFlags &= ~FLAG_ALTERNATE_SCREEN;
+			GlobalFlags |= FLAG_REDRAW;
+			return(ptr+5);
+		}
+		else if (strncmp(ptr, "1047h", 5)==0)
+		{
+			GlobalFlags |= FLAG_ALTERNATE_SCREEN;
+			return(ptr+5);
+		}
+		else if (strncmp(ptr, "1047l", 5)==0)
+		{
+			GlobalFlags &= ~FLAG_ALTERNATE_SCREEN;
+			GlobalFlags |= FLAG_REDRAW;
+			return(ptr+5);
+		}
+	}
 
-		DestroyString(Tempstr);
+	while (ptr && (ptr < end))
+	{
+	switch (*ptr)
+	{
+		case 'H':
+		GlobalFlags |= FLAG_CURSOR_HOME | FLAG_REDRAW;
+		AtEnd=TRUE;
+		break;
+
+		case 'J':
+		if (val=='0') GlobalFlags |= FLAG_REDRAW; //^[0J Clear from cursor to end of screen
+		if (val=='1') GlobalFlags |= FLAG_REDRAW; //^[1J Clear from cursor to start of screen
+		if (val=='2') GlobalFlags |= FLAG_CURSOR_HOME | FLAG_REDRAW; //^[2J Clear whole Screen 
+		AtEnd=TRUE;
+		break;
+
+		case '0':
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+		case '6':
+		case '7':
+		case '8':
+		case '9':
+		val=*ptr;
+		break;
+
+		case ';':
+		break;
+
+		default:
+		AtEnd=TRUE;
+		break;
+	}
+
+	ptr++;
+	if (*ptr==';') AtEnd=FALSE;
+	if (AtEnd) break;
+	}
+
+return(ptr);
 }
 
 
-void HandleSignal(int sig)
-{
-int wid, len;
-
-if (sig==SIGWINCH) GlobalFlags |= GOT_SIGWINCH;
-if (sig==SIGTERM) GlobalFlags |= GOT_SIGTERM;
-if (sig==SIGINT) GlobalFlags |= GOT_SIGINT;
-}
-
-void PropogateSignals(STREAM *Pipe)
-{
-int PeerPID;
-
-PeerPID=atoi(STREAMGetValue(Pipe,"PeerPID"));
-if (GlobalFlags & GOT_SIGWINCH) 
-{
-	HandleSigwinch(Pipe);
-	//kill(PeerPID,SIGWINCH);
-}
-
-if (GlobalFlags & GOT_SIGTERM) kill(PeerPID,SIGTERM);
-if (GlobalFlags & GOT_SIGINT) kill(PeerPID,SIGINT);
-GlobalFlags &= ~(GOT_SIGWINCH | GOT_SIGTERM | GOT_SIGINT);
-}
-
-
+//Handle ANSI coming from the crayonized program 
 char *HandleANSI(char *text, char *end)
 {
 char *ptr;
 
 ptr=text;
-ptr++;
-if (*ptr=='[')
-{
-	ptr++;
+if ((GlobalFlags & FLAG_STRIP_ANSI) && (*ptr==CTRLO)) return(ptr+1);
 
-	//Horrible switch function to handle all the possibilities. 
-	//Hopefully it's faster than just doing strcmps
-	switch (*ptr)
+while (*ptr=='\x1b') 
+{
+ptr++;
+if (*ptr=='[') ptr=HandleCSI(ptr+1, end);
+else 
+{
+	while (ptr < end)
 	{
-		case 'H':
-		GlobalFlags |= FLAG_CURSOR_HOME;
-		return(ptr);	
-		break;
-
-
-		case 'K':
-		return(text);	
-		break;
-	
-		case ';':
-		ptr++;
-		if (*ptr=='H')
-		{
-			GlobalFlags |= FLAG_CURSOR_HOME;
-			return(ptr);
-		}
-		break;
-
-		case '0':
-		if (strncmp(ptr,"0;0H",4)==0) 
-		{
-			GlobalFlags |= FLAG_CURSOR_HOME;
-			return(ptr+3);
-		}
-		break;
-
-		case '2':
-		if (strncmp(ptr,"2J",2)==0) 
-		{
-			GlobalFlags |= FLAG_CURSOR_HOME;
-			return(ptr+1);
-		}
-		break;
+		if (
+					(isalpha(*ptr) || (*ptr=='@'))
+					&&
+					(*(ptr+1) != ';') 
+				) break;
+			ptr++;
 	}
+	
+	//ESC[<val>@ means 'make room for characters to be inserted'
+	if (*ptr=='@') return(text);
+	if (*ptr=='H') return(text);
+	if (ptr!=end) ptr++;
+}
 }
 
-
-while (ptr < end)
-{
-	if (
-				(isalpha(*ptr) || (*ptr=='@'))
-				&&
-				(*(ptr+1) != ';') 
-			) break;
-		ptr++;
-}
-
-//ESC[<val>@ means 'make room for characters to be inserted'
-if (*ptr=='@') return(text);
-if (*ptr=='H') return(text);
-if (ptr==end) return(ptr);
-
-ptr++;
-return(ptr);
+if (GlobalFlags & FLAG_STRIP_ANSI) return(ptr);
+return(text);
 }
 
 
@@ -182,35 +192,32 @@ int ColorProgramOutput(STREAM *Pipe, ListNode *ColorMatches)
 			line_start=ptr;
 			while (ptr < end) 
 			{
-				if (
-							((*ptr=='\x1b') || (*ptr==CTRLO)) &&
-							(GlobalFlags & FLAG_STRIP_ANSI)
-					)
+				if ((*ptr=='\x1b')  || (*ptr==CTRLO))
 				{
-					if (*ptr==CTRLO) 
-					{
-						ptr++;
-						continue;
-					}
 
 					ansi_start=ptr;
 					ptr=HandleANSI(ptr,end);
 
+					//if ptr != ansi_start then strip ansi is active
+					if (ptr != ansi_start) continue;
+
+			/*
 					if (GlobalFlags & FLAG_CURSOR_HOME)
 					{
 						//Flush what we have
 						if (len >0) ColorLine(Pipe, Tempstr,len,ColorMatches);
-						result=(ptr-ansi_start) +1;
-						write(1,ansi_start,result);
+						//result=(ptr-ansi_start) +1;
+						//write(1,ansi_start,result);
 						len=0;
 						GlobalFlags &= ~FLAG_CURSOR_HOME;
 						LineNo=-1;
 						break;
 					}
+		*/
 				
 					if (ptr==end) 
 					{
-						//We have part of an ASCI sequence, with a bit missing
+						//We have part of an ANSI sequence, with a bit missing
 						//So save this in 'buffer' and recall
 						BuffFill=end-ansi_start;
 						memmove(Buffer,ansi_start,BuffFill);
@@ -238,11 +245,24 @@ int ColorProgramOutput(STREAM *Pipe, ListNode *ColorMatches)
 					continue;
 			}
 
-	//fprintf(stderr,"ColorLine: [%s]\n",Tempstr);
+//fprintf(stderr,"CL: %d [%s]\n",GlobalFlags & FLAG_STRIP_ANSI, Tempstr); fflush(NULL);
 			if (len >0) ColorLine(Pipe, Tempstr,len,ColorMatches);
+			if (GlobalFlags & FLAG_CURSOR_HOME)
+			{
+						GlobalFlags &= ~FLAG_CURSOR_HOME;
+						LineNo=-1;
+			}
 			LineNo++;
 			ptr++;
 			len=0;
+		}
+
+		//By now, whatever happens, we'll have drawn our line, so if we need to 
+		//refresh status bars becuase we cleared the screen, then we do so here
+		if (GlobalFlags & FLAG_REDRAW)
+		{
+			UpdateStatusBars(TRUE);
+			GlobalFlags &= ~FLAG_REDRAW;	
 		}
 	}
 
@@ -434,7 +454,7 @@ while (1)
 
     if (result == STREAM_CLOSED) break;
   }
-  else UpdateStatusBars();
+  else UpdateStatusBars(FALSE);
   PropogateSignals(CommandPipe);
 }
 }
@@ -477,19 +497,27 @@ Streams=ListCreate();
 
 
 
-ProcessCmdLine(CmdLine, ColorMatches);
-ProcessAppends(NULL, ColorMatches,CRAYON_PREPEND);
 
-
-CommandPipe=LaunchCommands(argc, argv, ColorMatches);
-
-
-if (KeypressFlags & KEYPRESS_PASSINPUT)
+//if (KeypressFlags & KEYPRESS_PASSINPUT)
+if (isatty(0))
 {
 	InitTTY(0, 0,TTYFLAG_LFCR|TTYFLAG_IGNSIG);
 	StdIn=STREAMFromFD(0);
 	ListAddItem(Streams,StdIn);
 }
+HandleSigwinch(NULL);
+
+ProcessCmdLine(CmdLine, ColorMatches);
+
+if (GlobalFlags & HAS_FOCUS) 
+{
+	Tempstr=CopyStr(Tempstr,"\x1b[?1004;1043h");
+	write(1, Tempstr, StrLen(Tempstr));
+}
+ProcessAppends(NULL, ColorMatches,CRAYON_PREPEND);
+
+
+CommandPipe=LaunchCommands(argc, argv, ColorMatches);
 
 
 ListAddItem(Streams,CommandPipe);
@@ -542,7 +570,7 @@ DestroyString(Tempstr);
 
 void CalledAsSelf(int argc, char *argv[])
 {
-char *Args[]={"-v","-version","--version","-?","-h","-help","--help","-config-help","-pmatch-help","-stdin",NULL};
+const char *Args[]={"-v","-version","--version","-?","-h","-help","--help","-config-help","-pmatch-help","-stdin",NULL};
 typedef enum {ARG_V1, ARG_V2, ARG_V3, ARG_H1, ARG_H2, ARG_H3, ARG_H4, ARG_CONFIG_HELP, ARG_PMATCH_HELP, ARG_STDIN};
 int i, val, new_argc=0;
 char **new_argv=NULL;
@@ -732,5 +760,5 @@ else
 	argv[0]=ptr;
 	CrayonizeCommand(argc,argv);
 }
-ResetTTY(0);
+if (isatty(0)) ResetTTY(0);
 }

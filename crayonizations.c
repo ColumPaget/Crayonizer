@@ -353,13 +353,29 @@ DestroyString(Tempstr);
 
 
 
+void FunctionCall(STREAM *Pipe, char *FuncName, char *Data)
+{
+ListNode *Curr, *Node;
+
+Curr=ListFindNamedItem(Functions, FuncName);
+if (Curr)
+{
+	Node=ListFindNamedItem((ListNode *) Curr->Item, Data);
+	if (Node) ProcessCrayonization(Pipe, Data, Data, NULL, (TCrayon *) Node->Item);
+}
+
+}
+
+
 void ApplySingleAction(STREAM *Pipe, int *AttribLine, char *Line, int Len, char *MatchStart, char *MatchEnd, TCrayon *Action)
 {
 int Attribs;
 int start, end, i;
 char *Tempstr=NULL, *EnvName=NULL, *ptr;
 
+
 if (GlobalFlags & FLAG_DONTCRAYON) return;
+
 
 	Attribs=Action->Attribs;
 	start=MatchStart-Line;
@@ -382,7 +398,15 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 		break;
 
 		case ACTION_SET_XTITLE: 
-			Tempstr=CopyStr(Tempstr,"\x1b]0;");
+			Tempstr=CopyStr(Tempstr,"\x1b]2;");
+			Tempstr=CatStrLen(Tempstr,MatchStart,end-start);
+			StripTrailingWhitespace(Tempstr);
+			Tempstr=CatStr(Tempstr,"\x07");
+			write(1,Tempstr,StrLen(Tempstr));
+		break;
+
+		case ACTION_SET_XICONNAME: 
+			Tempstr=CopyStr(Tempstr,"\x1b]1;");
 			Tempstr=CatStrLen(Tempstr,MatchStart,end-start);
 			StripTrailingWhitespace(Tempstr);
 			Tempstr=CatStr(Tempstr,"\x07");
@@ -390,7 +414,7 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 		break;
 
 		case ACTION_RESTORE_XTITLE:
-			Tempstr=CopyStr(Tempstr,"\x1b]0;");
+			Tempstr=CopyStr(Tempstr,"\x1b]2;");
 			Tempstr=CatStr(Tempstr,GetVar(Vars,"OldXtermTitle"));
 			StripTrailingWhitespace(Tempstr);
 			Tempstr=CatStr(Tempstr,"\x07");
@@ -404,6 +428,11 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 
 		case ACTION_FONT_DOWN:
 			Tempstr=CopyStr(Tempstr,"\x1b[?35h\x1b]50;#-1\x07");
+			write(1,Tempstr,StrLen(Tempstr));
+		break;
+
+		case ACTION_FONT:
+			Tempstr=MCopyStr(Tempstr,"\x1b[?35h\x1b]50;",Action->String,"\x07", NULL);
 			write(1,Tempstr,StrLen(Tempstr));
 		break;
 
@@ -503,6 +532,22 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 			write(1,CLRSCR,StrLen(CLRSCR)); 
 		break;
 
+		case ACTION_FUNCCALL:
+			FunctionCall(Pipe, Action->String, Line);
+		break;
+
+	case ACTION_INFOBAR:
+		InfoBar(Action);
+	break;
+	
+	case ACTION_QUERYBAR:
+		QueryBar(Action);
+	break;
+	
+	case ACTION_SELECTBAR:
+		SelectionBar(Action);
+	break;
+
 		case ACTION_EDIT:
 			//StatusBarHandleInput(Pipe, NULL, Action->Attribs);
 		break;
@@ -513,13 +558,6 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 			GlobalFlags = FLAG_DONTCRAYON;
 		break;
 
-		case ACTION_QUERYBAR:
-			QueryBar(Action->Match, Action->String, Action->Attribs);
-		break;
-
-		case ACTION_SELECTBAR:
-			SelectionBar(Action->Match, Action->String, Action->Attribs);
-		break;
 		}
 
 
@@ -545,6 +583,7 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 
 int IsMatchType(TCrayon *Crayon)
 {
+
 switch (Crayon->Type)
 {
 	case CRAYON_LINE:
@@ -563,25 +602,36 @@ return(FALSE);
 }
 
 
+
+int ProcessSubactions(STREAM *Pipe, int *AttribLine, char *Line, int Len, char *MatchStart, char *MatchEnd, TCrayon *Crayon)
+{
+int i;
+
+	for (i=0; i < Crayon->ActionCount; i++)
+	{
+		if (IsMatchType(&Crayon->Actions[i]))
+		{
+			ProcessCrayonization(Pipe, Line, Len, AttribLine, &Crayon->Actions[i]);
+		}
+		else ApplyActions(Pipe, AttribLine, Line, Len, MatchStart, MatchEnd, &Crayon->Actions[i]);
+	}
+}
+
+
+
 int ProcessActionAndSubactions(STREAM *Pipe, int *AttribLine, char *Line, int Len, char *MatchStart, char *MatchEnd, TCrayon *Crayon)
 {
-int i, result=FALSE;
+int result=FALSE;
 
 		if (CrayonMatches(Crayon, MatchStart,MatchEnd)) 
 		{
 			ApplySingleAction(Pipe,AttribLine, Line, Len, MatchStart, MatchEnd, Crayon);
+			ProcessSubactions(Pipe, AttribLine, Line, Len, MatchStart, MatchEnd, Crayon);
 			result=TRUE;
-			for (i=0; i < Crayon->ActionCount; i++)
-			{
-				if (IsMatchType(&Crayon->Actions[i]))
-				{
-					 ProcessCrayonization(Pipe, Line, Len, AttribLine, &Crayon->Actions[i]);
-				}
-				else ApplyActions(Pipe, AttribLine, Line, Len, MatchStart, MatchEnd, &Crayon->Actions[i]);
-			}
 		}
 	return(result);
 }
+
 
 //This function handles action types that involve adding lines of text to the output,
 //usually appends and prepends
@@ -644,11 +694,15 @@ if (GlobalFlags & FLAG_DONTCRAYON) return(FALSE);
 
 	//Key presses will already have been matched
 	case CRAYON_KEYPRESS:
+		ProcessSubactions(Pipe, AttribLine, Line, Len, MatchStart, MatchEnd, Crayon);
+		result=TRUE;
+/*
 	for (i=0; i < Crayon->ActionCount; i++)
 	{
 		ApplySingleAction(Pipe, AttribLine, Line, Len, MatchStart, MatchEnd, &Crayon->Actions[i]);
 		result=TRUE;
 	}
+*/		
 	break;
 
 	default:
@@ -713,7 +767,7 @@ for (i=0; i < Len; i++)
 	else Tempstr=AddCharToStr(Tempstr,Line[i]);
 }
 
-Tempstr=CatStr(Tempstr,NORM);
+if (LastAttrib > 0) Tempstr=CatStr(Tempstr,NORM);
 write(1,Tempstr,StrLen(Tempstr));
 DestroyString(Tempstr);
 }
@@ -734,7 +788,7 @@ int ProcessCrayonization(STREAM *Pipe, char *Line, int Len, int *Attribs, TCrayo
 	}
 	break;
 
-
+	case CRAYON_ACTION:
 	case CRAYON_IF:
 	case CRAYON_LINENO:
 	result=ApplyActions(Pipe, Attribs, Line, Len, Line, Line+Len, Crayon);
