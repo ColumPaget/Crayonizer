@@ -508,12 +508,35 @@ DestroyString(Token);
 
 
 
+//This parses a 'standard crayonization', which means those things that
+//can occur anywhere in the config, not just at the highest level
+void ParseCrayonization(char *Type, char *Config, ListNode *CrayonList)
+{
+	TCrayon *Crayon=NULL, *CLS=NULL, *Action=NULL;
+
+	Crayon=(TCrayon *) calloc(1,sizeof(TCrayon));
+	ParseCrayonEntry(Crayon, Type, Config);
+	ListAddNamedItem(CrayonList,Crayon->Match,Crayon);
+
+	if (Crayon->Type==CRAYON_STATUSBAR)
+	{
+		//Add a CLS entry
+		CLS=(TCrayon *) calloc(1,sizeof(TCrayon));
+		ParseCrayonEntry(CLS, "string", "[2J");
+		//ParseCrayonEntry(CLS, "string", "\x1b[;H");
+		Action=NewCrayonAction(Crayon,0);
+		Action->ActType=ACTION_REDRAW;
+		ListAddNamedItem(CrayonList,CLS->Match,CLS);
+	}
+
+}
+
+
 
 void ConfigReadEntry(STREAM *S, ListNode *ColorMatches)
 {
 char *Tempstr=NULL, *Token=NULL, *ptr;
-TCrayon *Crayon=NULL, *CLS, *Action;
-ListNode *Curr;
+TCrayon *Crayon=NULL;
 
 	Tempstr=STREAMReadLine(Tempstr,S);
 	while (Tempstr)
@@ -550,23 +573,9 @@ ListNode *Curr;
 			{
 				if (Crayon) ParseCrayonList(S,Crayon);
 			}
-			else
-			{
-		 		Crayon=(TCrayon *) calloc(1,sizeof(TCrayon));
-				ParseCrayonEntry(Crayon,Token,ptr);
-				ListAddNamedItem(ColorMatches,Crayon->Match,Crayon);
-
-				if (Crayon->Type==CRAYON_STATUSBAR)
-				{
-					//Add a CLS entry
-					CLS=(TCrayon *) calloc(1,sizeof(TCrayon));
-					ParseCrayonEntry(CLS, "string", "[2J");
-					//ParseCrayonEntry(CLS, "string", "\x1b[;H");
-					Action=NewCrayonAction(Crayon,0);
-					Action->ActType=ACTION_REDRAW;
-					ListAddNamedItem(ColorMatches,CLS->Match,CLS);
-				}
-			}
+			//Otherwise it's a 'standard' crayonization that can occur 
+			//in sublists/functions etc
+			else ParseCrayonization(Token, ptr, ColorMatches);
 		}
 	Tempstr=STREAMReadLine(Tempstr,S);
 	}
@@ -632,12 +641,7 @@ while (Tempstr)
 	ptr=GetToken(Tempstr, "\\S", &Token, GETTOKEN_QUOTES);
 	if (strcmp(Token,"}")==0) break;
 	
-	Crayon=(TCrayon *) calloc(1,sizeof(TCrayon));
-	Crayon->Type=CRAYON_ACTION;
-	ParseCrayonAction(Crayon, ptr);
-	
-	ListAddNamedItem(Select, Token, Crayon);
-	
+	ParseCrayonization(Token, ptr, Select);
 	Tempstr=STREAMReadLine(Tempstr, S);
 }
 

@@ -770,6 +770,7 @@ cmdline_argv=argv;
 Vars=ListCreate();
 time(&StartTime);
 CrayonizerGetEnvironment();
+GlobalFlags=FLAG_FOCUSED;
 
 if (strcmp(basename(argv[0]),"crayonizer")==0) CalledAsSelf(argc, argv);
 else 

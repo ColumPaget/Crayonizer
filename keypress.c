@@ -241,8 +241,17 @@ switch (*ptr)
 				case 'Z': strncpy(KeySym,"shift-tab",MaxLen); return(end-Sequence); break;
 
 				//window focus/unfocus events
-				case 'I': strncpy(KeySym,"focus",MaxLen); return(end-Sequence); break;
-				case 'O': strncpy(KeySym,"unfocus",MaxLen); return(end-Sequence); break;
+				case 'I': 
+					strncpy(KeySym,"focus",MaxLen); 
+					GlobalFlags |= FLAG_FOCUSED;
+					return(end-Sequence); 
+				break;
+
+				case 'O': 
+					strncpy(KeySym,"unfocus",MaxLen); 
+					GlobalFlags &= ~FLAG_FOCUSED;
+					return(end-Sequence); 
+				break;
 
 
 				case '0':

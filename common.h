@@ -20,6 +20,7 @@
 #define FLAG_STATUSBAR_INPUT 256
 #define FLAG_REDRAW 512
 #define FLAG_ALTERNATE_SCREEN 1024
+#define FLAG_FOCUSED 2048
 
 
 //these go in highbytes of 'Crayon->Action->Attribs'

@@ -66,7 +66,10 @@ int result=FALSE, val, i;
 				}
 			break;
 
-
+			case 'f':
+				result=FALSE;
+				if (strncmp(Token,"focus",5)==0) result=GlobalFlags & FLAG_FOCUSED;
+			break;
 
 			case 'l':
 				result=FALSE;
@@ -88,7 +91,6 @@ int result=FALSE, val, i;
 					}
 				}
 			break;
-
 
 			case 'e':
 				if (strncmp(Token,"exists(",7)==0)
@@ -358,12 +360,7 @@ void FunctionCall(STREAM *Pipe, char *FuncName, char *Data)
 ListNode *Curr, *Node;
 
 Curr=ListFindNamedItem(Functions, FuncName);
-if (Curr)
-{
-	Node=ListFindNamedItem((ListNode *) Curr->Item, Data);
-	if (Node) ProcessCrayonization(Pipe, Data, Data, NULL, (TCrayon *) Node->Item);
-}
-
+if (Curr) ColorLine(Pipe, NULL, 0, (ListNode *) Curr->Item);
 }
 
 
@@ -911,7 +908,7 @@ int *Attribs=NULL;
 ListNode *Curr;
 
 
-Attribs=(int *) calloc(Len,sizeof(int));
+if (Len > 0) Attribs=(int *) calloc(Len,sizeof(int));
 Curr=ListGetNext(ColorMatches);
 while (Curr)
 {
@@ -919,6 +916,6 @@ while (Curr)
 	Curr=ListGetNext(Curr);
 }
 OutputLineWithAttributes(Line, Attribs, Len);
-free(Attribs);
+if (Attribs) free(Attribs);
 }
 
