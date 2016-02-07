@@ -159,7 +159,7 @@ return(text);
 }
 
 
-int ColorProgramOutput(STREAM *Pipe, ListNode *ColorMatches)
+int ColorProgramOutput(STREAM *Pipe, ListNode *CrayonList)
 {
 	static char *Buffer=NULL;
 	static int BuffFill=0;
@@ -204,7 +204,7 @@ int ColorProgramOutput(STREAM *Pipe, ListNode *ColorMatches)
 					if (GlobalFlags & FLAG_CURSOR_HOME)
 					{
 						//Flush what we have
-						if (len >0) ColorLine(Pipe, Tempstr,len,ColorMatches);
+						if (len >0) Crayonize(Pipe, Tempstr,len,CrayonList);
 						//result=(ptr-ansi_start) +1;
 						//write(1,ansi_start,result);
 						len=0;
@@ -245,7 +245,7 @@ int ColorProgramOutput(STREAM *Pipe, ListNode *ColorMatches)
 			}
 
 //fprintf(stderr,"CL: %d [%s]\n",GlobalFlags & FLAG_STRIP_ANSI, Tempstr); fflush(NULL);
-			if (len >0) ColorLine(Pipe, Tempstr,len,ColorMatches);
+			if (len >0) Crayonize(Pipe, Tempstr,len,CrayonList);
 			if (GlobalFlags & FLAG_CURSOR_HOME)
 			{
 						GlobalFlags &= ~FLAG_CURSOR_HOME;
@@ -463,7 +463,7 @@ while (1)
   if (S)
   {
     if (S==StdIn) result=KeypressProcess(StdIn,CommandPipe);
-    else result=ColorProgramOutput(CommandPipe, ColorMatches);
+    else result=ColorProgramOutput(CommandPipe, CrayonList);
 
     if (result == STREAM_CLOSED) break;
   }
@@ -482,11 +482,11 @@ STREAM *S;
 char *Tempstr=NULL, *CrayonizerDir=NULL, *CmdLine=NULL;
 int val, i, result;
 
-ColorMatches=ListCreate();
+CrayonList=ListCreate();
 for (i=0; i < argc; i++) CmdLine=MCatStr(CmdLine,argv[i]," ",NULL);
 StripTrailingWhitespace(CmdLine);
 
-ConfigLoad(CmdLine, &CrayonizerDir, ColorMatches);
+ConfigLoad(CmdLine, &CrayonizerDir, CrayonList);
 
 if (! StrLen(CrayonizerDir))
 {
@@ -503,7 +503,7 @@ LoadEnvironment();
 
 //if not outputing to a tty then run
 //if (! isatty(1)) GlobalFlags |=FLAG_DONTCRAYON;
-if (! ListSize(ColorMatches)) GlobalFlags |=FLAG_DONTCRAYON;
+if (! ListSize(CrayonList)) GlobalFlags |=FLAG_DONTCRAYON;
 
 
 //Okay, we're committed to running the command!
@@ -521,7 +521,7 @@ if (isatty(0))
 }
 HandleSigwinch(NULL);
 
-ProcessCmdLine(CmdLine, ColorMatches);
+ProcessCmdLine(CmdLine, CrayonList);
 
 if (GlobalFlags & HAS_FOCUS) 
 {
@@ -530,11 +530,11 @@ if (GlobalFlags & HAS_FOCUS)
 }
 
 //We do non-text 'onstart' items before text-output prepends
-ProcessAppends(NULL, ColorMatches, CRAYON_ONSTART);
-ProcessAppends(NULL, ColorMatches, CRAYON_PREPEND);
+ProcessAppends(NULL, CrayonList, CRAYON_ONSTART);
+ProcessAppends(NULL, CrayonList, CRAYON_PREPEND);
 
 
-CommandPipe=LaunchCommands(argc, argv, ColorMatches);
+CommandPipe=LaunchCommands(argc, argv, CrayonList);
 
 
 ListAddItem(Streams,CommandPipe);
@@ -543,13 +543,13 @@ wait(&val);
 
 Tempstr=FormatStr(Tempstr,"%d",time(NULL) - StartTime);
 SetVar(Vars,"duration",Tempstr);
-ProcessAppends(CommandPipe,ColorMatches,CRAYON_APPEND);
-ProcessAppends(CommandPipe,ColorMatches,CRAYON_ONEXIT);
+ProcessAppends(CommandPipe,CrayonList,CRAYON_APPEND);
+ProcessAppends(CommandPipe,CrayonList,CRAYON_ONEXIT);
 
 STREAMClose(CommandPipe);
 STREAMDisassociateFromFD(StdIn);
 ListDestroy(Streams,NULL);
-ListDestroy(ColorMatches,free);
+ListDestroy(CrayonList,free);
 DestroyString(Tempstr);
 DestroyString(CmdLine);
 DestroyString(CrayonizerDir);
@@ -560,25 +560,25 @@ DestroyString(CrayonizerDir);
 void CrayonizeSTDIN(int argc, char *argv[])
 {
 char *Tempstr=NULL, *CrayonizerDir=NULL, *CmdLine=NULL;
-ListNode *ColorMatches;
+ListNode *CrayonList;
 int val, i;
 
-ColorMatches=ListCreate();
+CrayonList=ListCreate();
 for (i=0; i < argc; i++) CmdLine=MCatStr(CmdLine,argv[i]," ",NULL);
-ConfigLoad(CmdLine, &CrayonizerDir, ColorMatches);
+ConfigLoad(CmdLine, &CrayonizerDir, CrayonList);
 
 StdIn=STREAMFromFD(0);
 
 Tempstr=STREAMReadLine(Tempstr,StdIn);
 while (Tempstr)
 {
-ColorLine(StdIn, Tempstr,StrLen(Tempstr),ColorMatches);
+Crayonize(StdIn, Tempstr,StrLen(Tempstr),CrayonList);
 LineNo++;
 Tempstr=STREAMReadLine(Tempstr,StdIn);
 }
 
 STREAMDisassociateFromFD(StdIn);
-ListDestroy(ColorMatches,free);
+ListDestroy(CrayonList,free);
 DestroyString(CrayonizerDir);
 DestroyString(CmdLine);
 DestroyString(Tempstr);

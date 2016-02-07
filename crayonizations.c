@@ -360,7 +360,7 @@ void FunctionCall(STREAM *Pipe, char *FuncName, char *Data)
 ListNode *Curr, *Node;
 
 Curr=ListFindNamedItem(Functions, FuncName);
-if (Curr) ColorLine(Pipe, NULL, 0, (ListNode *) Curr->Item);
+if (Curr) Crayonize(Pipe, NULL, 0, (ListNode *) Curr->Item);
 }
 
 
@@ -902,14 +902,14 @@ return(result);
 }
 
 
-void ColorLine(STREAM *Pipe, char *Line, int Len, ListNode *ColorMatches)
+void Crayonize(STREAM *Pipe, char *Line, int Len, ListNode *CrayonList)
 {
 int *Attribs=NULL;
 ListNode *Curr;
 
 
 if (Len > 0) Attribs=(int *) calloc(Len,sizeof(int));
-Curr=ListGetNext(ColorMatches);
+Curr=ListGetNext(CrayonList);
 while (Curr)
 {
 	ProcessCrayonization(Pipe, Line, Len, Attribs, (TCrayon *) Curr->Item);

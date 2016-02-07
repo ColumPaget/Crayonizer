@@ -533,7 +533,7 @@ void ParseCrayonization(char *Type, char *Config, ListNode *CrayonList)
 
 
 
-void ConfigReadEntry(STREAM *S, ListNode *ColorMatches)
+void ConfigReadEntry(STREAM *S, ListNode *CrayonList)
 {
 char *Tempstr=NULL, *Token=NULL, *ptr;
 TCrayon *Crayon=NULL;
@@ -547,7 +547,7 @@ TCrayon *Crayon=NULL;
 
 		if (*Token=='#')  /*do nothing*/;
 		else if (strcmp(Token,"}")==0) break;
-		else if (ColorMatches)
+		else if (CrayonList)
 		{
 			if (strcasecmp(Token,"passinput")==0) KeypressFlags |=  KEYPRESS_PASSINPUT;
 			else if (strcasecmp(Token,"lineedit")==0) KeypressFlags |= KEYPRESS_LINEDIT;
@@ -575,7 +575,7 @@ TCrayon *Crayon=NULL;
 			}
 			//Otherwise it's a 'standard' crayonization that can occur 
 			//in sublists/functions etc
-			else ParseCrayonization(Token, ptr, ColorMatches);
+			else ParseCrayonization(Token, ptr, CrayonList);
 		}
 	Tempstr=STREAMReadLine(Tempstr,S);
 	}
@@ -652,7 +652,7 @@ DestroyString(Token);
 
 
 
-int ConfigReadFile(const char *Path, const char *CommandLine, char **CrayonizerDir, ListNode *ColorMatches)
+int ConfigReadFile(const char *Path, const char *CommandLine, char **CrayonizerDir, ListNode *CrayonList)
 {
 STREAM *S;
 char *Tempstr=NULL, *Token=NULL, *ptr;
@@ -675,12 +675,12 @@ while (Tempstr)
 		ptr=GetToken(ptr,"\\S",&Token,0);
 		if (EntryMatchesCommand(Token,ptr,ProgName, Args))
 		{
-			ConfigReadEntry(S, ColorMatches);
+			ConfigReadEntry(S, CrayonList);
 		}
 		else ConfigReadEntry(S, NULL);
 	}
 	else if (strcasecmp(Token,"function")==0) ParseFunction(S, ptr);
-	else if (strcasecmp(Token,"include")==0) ConfigReadFile(ptr, CommandLine, CrayonizerDir, ColorMatches);
+	else if (strcasecmp(Token,"include")==0) ConfigReadFile(ptr, CommandLine, CrayonizerDir, CrayonList);
 	else if (strcasecmp(Token,"selection")==0) StatusBarParseSelection(S, ptr);
 
 	Tempstr=STREAMReadLine(Tempstr,S);
@@ -694,7 +694,7 @@ return(TRUE);
 }
 
 
-int ConfigLoad(const char *CmdLine, char **CrayonizerDir, ListNode *ColorMatches)
+int ConfigLoad(const char *CmdLine, char **CrayonizerDir, ListNode *CrayonList)
 {
 char *Paths[]={"$(UserCrayonizerDir)/$(Command).conf","$(UserDir)/.crayonizer.conf","$(SystemCrayonizerDir)/$(Command).conf","$(SystemConfigDir)/crayonizer.conf",NULL};
 int RetVal=FALSE;
@@ -718,7 +718,7 @@ SetVar(Vars,"UserCrayonizerDir",Tempstr);
 for (i=0; Paths[i] !=NULL; i++)
 {
 	Tempstr=SubstituteVarsInString(Tempstr,Paths[i],Vars,0);
-	if (ConfigReadFile(Tempstr, CmdLine, CrayonizerDir, ColorMatches))
+	if (ConfigReadFile(Tempstr, CmdLine, CrayonizerDir, CrayonList))
 	{
 		RetVal=TRUE;
 		break;

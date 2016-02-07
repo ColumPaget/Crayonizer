@@ -90,7 +90,7 @@ extern int cmdline_argc;
 extern char **cmdline_argv;
 extern char *CrayonizerMMap;
 extern STREAM *StdIn, *CommandPipe;
-extern ListNode *ColorMatches, *Streams, *Functions;
+extern ListNode *CrayonList, *Streams, *Functions;
 extern time_t Now;
 
 void CrayonizerProcessInputs();
