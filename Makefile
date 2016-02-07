@@ -17,31 +17,31 @@ all: $(OBJ) main.c common.h
 	$(CC) $(FLAGS) -o crayonizer main.c $(LIBS) $(OBJ) libUseful-2.3/libUseful-2.3.a 
 
 config_file.o: config_file.c config_file.h common.h
-	gcc -c config_file.c
+	gcc $(FLAGS) -c config_file.c
 
 common.o: common.c common.h common.h
-	gcc -c common.c
+	gcc $(FLAGS) -c common.c
 
 crayonizations.o: crayonizations.c crayonizations.h common.h
-	gcc -c crayonizations.c
+	gcc $(FLAGS) -c crayonizations.c
 
 help.o: help.c help.h common.h
-	gcc -c help.c
+	gcc $(FLAGS) -c help.c
 
 xterm.o: xterm.c xterm.h common.h
-	gcc -c xterm.c
+	gcc $(FLAGS) -c xterm.c
 
 keypress.o: keypress.c keypress.h common.h
-	gcc -c keypress.c
+	gcc $(FLAGS) -c keypress.c
 
 signals.o: signals.c signals.h common.h
-	gcc -c signals.c
+	gcc $(FLAGS) -c signals.c
 
 text_substitutions.o: text_substitutions.c text_substitutions.h common.h
-	gcc -c text_substitutions.c
+	gcc $(FLAGS) -c text_substitutions.c
 
 status_bar.o: status_bar.c status_bar.h common.h
-	gcc -c status_bar.c
+	gcc $(FLAGS) -c status_bar.c
 
 clean:
 	@rm -f crayonizer *.o libUseful-2.3/*.o libUseful-2.3/*.a libUseful-2.3/*.so

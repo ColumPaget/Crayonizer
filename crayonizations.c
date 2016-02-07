@@ -212,6 +212,8 @@ case CRAYON_MAPTO:
 case CRAYON_LINEMAPTO:
 case CRAYON_APPEND: 
 case CRAYON_PREPEND: 
+case CRAYON_ONSTART: 
+case CRAYON_ONEXIT: 
 case CRAYON_PASSINPUT: 
 case CRAYON_CMDLINE: 
 case CRAYON_VALUE: 
@@ -220,6 +222,7 @@ break;
 
 
 case CRAYON_COMPARATOR:
+	if (! sptr) return(FALSE);
 	val=atof(sptr);
 //For a 'value' item, it's actions can contain multiple 'value' checks
 	switch (Crayon->Op)
@@ -372,10 +375,11 @@ void ApplySingleAction(STREAM *Pipe, int *AttribLine, char *Line, int Len, char 
 int Attribs;
 int start, end, i;
 char *Tempstr=NULL, *EnvName=NULL, *ptr;
-
+TCrayon *StatusBar=NULL;
 
 if (GlobalFlags & FLAG_DONTCRAYON) return;
 
+	StatusBar=StatusBarGetActive();
 
 	Attribs=Action->Attribs;
 	start=MatchStart-Line;
@@ -397,44 +401,6 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 			}
 		break;
 
-		case ACTION_SET_XTITLE: 
-			Tempstr=CopyStr(Tempstr,"\x1b]2;");
-			Tempstr=CatStrLen(Tempstr,MatchStart,end-start);
-			StripTrailingWhitespace(Tempstr);
-			Tempstr=CatStr(Tempstr,"\x07");
-			write(1,Tempstr,StrLen(Tempstr));
-		break;
-
-		case ACTION_SET_XICONNAME: 
-			Tempstr=CopyStr(Tempstr,"\x1b]1;");
-			Tempstr=CatStrLen(Tempstr,MatchStart,end-start);
-			StripTrailingWhitespace(Tempstr);
-			Tempstr=CatStr(Tempstr,"\x07");
-			write(1,Tempstr,StrLen(Tempstr));
-		break;
-
-		case ACTION_RESTORE_XTITLE:
-			Tempstr=CopyStr(Tempstr,"\x1b]2;");
-			Tempstr=CatStr(Tempstr,GetVar(Vars,"OldXtermTitle"));
-			StripTrailingWhitespace(Tempstr);
-			Tempstr=CatStr(Tempstr,"\x07");
-			write(1,Tempstr,StrLen(Tempstr));
-		break;
-
-		case ACTION_FONT_UP:
-			Tempstr=CopyStr(Tempstr,"\x1b[?35h\x1b]50;#+1\x07");
-			write(1,Tempstr,StrLen(Tempstr));
-		break;
-
-		case ACTION_FONT_DOWN:
-			Tempstr=CopyStr(Tempstr,"\x1b[?35h\x1b]50;#-1\x07");
-			write(1,Tempstr,StrLen(Tempstr));
-		break;
-
-		case ACTION_FONT:
-			Tempstr=MCopyStr(Tempstr,"\x1b[?35h\x1b]50;",Action->String,"\x07", NULL);
-			write(1,Tempstr,StrLen(Tempstr));
-		break;
 
 		case ACTION_REPLACE:
 		strcpy(MatchStart,Action->String);
@@ -508,7 +474,6 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 			write(1,Tempstr,StrLen(Tempstr));
 		break;
 
-
 		case ACTION_XTERM_BGCOLOR:
 			EnvName=SubstituteVarsInString(EnvName,Action->String,Vars,0);
 			Tempstr=MCopyStr(Tempstr,"\x1b]11;",EnvName,"\007",NULL);
@@ -527,6 +492,84 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 			write(1,Tempstr,StrLen(Tempstr));
 		break;
 
+		case ACTION_SET_XTITLE: 
+			Tempstr=CopyStr(Tempstr,"\x1b]2;");
+			Tempstr=CatStrLen(Tempstr,MatchStart,end-start);
+			StripTrailingWhitespace(Tempstr);
+			Tempstr=CatStr(Tempstr,"\x07");
+			write(1,Tempstr,StrLen(Tempstr));
+		break;
+
+		case ACTION_SET_XICONNAME: 
+			Tempstr=CopyStr(Tempstr,"\x1b]1;");
+			Tempstr=CatStrLen(Tempstr,MatchStart,end-start);
+			StripTrailingWhitespace(Tempstr);
+			Tempstr=CatStr(Tempstr,"\x07");
+			write(1,Tempstr,StrLen(Tempstr));
+		break;
+
+		case ACTION_RESTORE_XTITLE:
+			Tempstr=CopyStr(Tempstr,"\x1b]2;");
+			Tempstr=CatStr(Tempstr,GetVar(Vars,"OldXtermTitle"));
+			StripTrailingWhitespace(Tempstr);
+			Tempstr=CatStr(Tempstr,"\x07");
+			write(1,Tempstr,StrLen(Tempstr));
+		break;
+
+		case ACTION_DEICONIFY: 
+			Tempstr=CopyStr(Tempstr,"\x1b[1t");
+			write(1,Tempstr,StrLen(Tempstr));
+		break;
+
+		case ACTION_ICONIFY: 
+			Tempstr=CopyStr(Tempstr,"\x1b[2t");
+			write(1,Tempstr,StrLen(Tempstr));
+		break;
+
+		case ACTION_DEMAXIMIZE: 
+			Tempstr=CopyStr(Tempstr,"\x1b[9;0t");
+			write(1,Tempstr,StrLen(Tempstr));
+		break;
+
+		case ACTION_MAXIMIZE: 
+			Tempstr=CopyStr(Tempstr,"\x1b[9;1t");
+			write(1,Tempstr,StrLen(Tempstr));
+		break;
+
+		case ACTION_HIGH: 
+			Tempstr=CopyStr(Tempstr,"\x1b[9;2t");
+			write(1,Tempstr,StrLen(Tempstr));
+		break;
+
+		case ACTION_WIDE: 
+			Tempstr=CopyStr(Tempstr,"\x1b[9;3t");
+			write(1,Tempstr,StrLen(Tempstr));
+		break;
+
+		case ACTION_XRAISE: 
+			Tempstr=CopyStr(Tempstr,"\x1b[5t");
+			write(1,Tempstr,StrLen(Tempstr));
+		break;
+
+		case ACTION_XLOWER: 
+			Tempstr=CopyStr(Tempstr,"\x1b[6t");
+			write(1,Tempstr,StrLen(Tempstr));
+		break;
+
+		case ACTION_FONT_UP:
+			Tempstr=CopyStr(Tempstr,"\x1b[?35h\x1b]50;#+1\x07");
+			write(1,Tempstr,StrLen(Tempstr));
+		break;
+
+		case ACTION_FONT_DOWN:
+			Tempstr=CopyStr(Tempstr,"\x1b[?35h\x1b]50;#-1\x07");
+			write(1,Tempstr,StrLen(Tempstr));
+		break;
+
+		case ACTION_FONT:
+			Tempstr=MCopyStr(Tempstr,"\x1b[?35h\x1b]50;",Action->String,"\x07", NULL);
+			write(1,Tempstr,StrLen(Tempstr));
+		break;
 
 		case ACTION_CLEARSCREEN:
 			write(1,CLRSCR,StrLen(CLRSCR)); 
@@ -537,19 +580,22 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 		break;
 
 	case ACTION_INFOBAR:
-		InfoBar(Action);
+		if (! StatusBar) InfoBar(Action);
+		else if (StatusBar==Action) StatusBarCloseActive();
 	break;
 	
 	case ACTION_QUERYBAR:
-		QueryBar(Action);
+		if (! StatusBar) QueryBar(Action);
+		else if (StatusBar==Action) StatusBarCloseActive();
 	break;
 	
 	case ACTION_SELECTBAR:
-		SelectionBar(Action);
+		if (! StatusBar) SelectionBar(Action);
+		else if (StatusBar==Action) StatusBarCloseActive();
 	break;
 
 		case ACTION_EDIT:
-			//StatusBarHandleInput(Pipe, NULL, Action->Attribs);
+			StatusBarHandleInput(Pipe, NULL, Action->String);
 		break;
 
 		case ACTION_DONTCRAYON:
@@ -647,7 +693,17 @@ char *Tempstr=NULL;
     memset(Attribs,0,Len*sizeof(int));
     ProcessActionAndSubactions(Pipe, Attribs, Tempstr, Len, Tempstr, Tempstr+Len, Crayon);
 
-		OutputLineWithAttributes(Tempstr, Attribs, Len);
+		switch (Crayon->Type)
+		{
+			case CRAYON_APPEND:
+			case CRAYON_PREPEND:
+			OutputLineWithAttributes(Tempstr, Attribs, Len);
+			break;
+
+			case CRAYON_ONSTART:
+			case CRAYON_ONEXIT:
+			break;
+		}
 
 		DestroyString(Tempstr);
 		free(Attribs);
@@ -676,6 +732,14 @@ if (GlobalFlags & FLAG_DONTCRAYON) return(FALSE);
 		}
 	break;
 
+	case CRAYON_PREPEND:
+		if (GlobalFlags & FLAG_DOING_PREPENDS) 
+		{
+			AppendTextAction(Pipe, Crayon);
+			result=TRUE;
+		}
+	break;
+
 	case CRAYON_APPEND:
 		if (GlobalFlags & FLAG_DOING_APPENDS) 
 		{
@@ -684,8 +748,16 @@ if (GlobalFlags & FLAG_DONTCRAYON) return(FALSE);
 		}
 	break;
 
-	case CRAYON_PREPEND:
+	case CRAYON_ONSTART:
 		if (GlobalFlags & FLAG_DOING_PREPENDS) 
+		{
+			AppendTextAction(Pipe, Crayon);
+			result=TRUE;
+		}
+	break;
+
+	case CRAYON_ONEXIT:
+		if (GlobalFlags & FLAG_DOING_APPENDS) 
 		{
 			AppendTextAction(Pipe, Crayon);
 			result=TRUE;

@@ -283,7 +283,10 @@ int i, Len;
 int *Attribs=NULL;
 
 if (Type==CRAYON_PREPEND) GlobalFlags |= FLAG_DOING_PREPENDS;
+if (Type==CRAYON_ONSTART) GlobalFlags |= FLAG_DOING_PREPENDS;
 if (Type==CRAYON_APPEND) GlobalFlags |= FLAG_DOING_APPENDS;
+if (Type==CRAYON_ONEXIT) GlobalFlags |= FLAG_DOING_APPENDS;
+
 if (GlobalFlags & HAS_STATUSBAR) SetupStatusBars();
 
 Curr=ListGetNext(Crayons);
@@ -292,7 +295,9 @@ while (Curr)
 	Item=(TCrayon *) Curr->Item;
 
 	if (
-			(Item->Type==Type) || (Item->Type==CRAYON_IF) || (Item->Type==CRAYON_ARGS) 
+			(Item->Type==Type) || 
+			(Item->Type==CRAYON_IF) || 
+			(Item->Type==CRAYON_ARGS)
 		)
 	{
 		Len=StrLen(Item->Match);
@@ -514,7 +519,10 @@ if (GlobalFlags & HAS_FOCUS)
 	Tempstr=CopyStr(Tempstr,"\x1b[?1004;1043h");
 	write(1, Tempstr, StrLen(Tempstr));
 }
-ProcessAppends(NULL, ColorMatches,CRAYON_PREPEND);
+
+//We do non-text 'onstart' items before text-output prepends
+ProcessAppends(NULL, ColorMatches, CRAYON_ONSTART);
+ProcessAppends(NULL, ColorMatches, CRAYON_PREPEND);
 
 
 CommandPipe=LaunchCommands(argc, argv, ColorMatches);
@@ -527,6 +535,7 @@ wait(&val);
 Tempstr=FormatStr(Tempstr,"%d",time(NULL) - StartTime);
 SetVar(Vars,"duration",Tempstr);
 ProcessAppends(CommandPipe,ColorMatches,CRAYON_APPEND);
+ProcessAppends(CommandPipe,ColorMatches,CRAYON_ONEXIT);
 
 STREAMClose(CommandPipe);
 STREAMDisassociateFromFD(StdIn);
