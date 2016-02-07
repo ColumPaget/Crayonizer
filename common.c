@@ -8,5 +8,5 @@ char **cmdline_argv;
 char *CrayonizerMMap=NULL;
 STREAM *StdIn=NULL, *CommandPipe=NULL;
 ListNode *ColorMatches=NULL, *Streams=NULL, *Functions=NULL;
-
+time_t Now=0;
 

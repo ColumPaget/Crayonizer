@@ -326,27 +326,23 @@ return(result);
 int FindKeypressAction(STREAM *Out, const char *KeySym)
 {
 int i;
-char *WorkingSpace=NULL;
-
-// Working space is provided so that we can 'replace' text 
-WorkingSpace=SetStrLen(WorkingSpace,255);
 
 //KeyPresses here are the actions booked against different keypress events
 for (i=0; i < NoOfKeyPresses; i++)
 {
 	if (strcmp(KeyPresses[i].Match,KeySym)==0)
 	{
-		if (ApplyActions(Out,NULL, KeySym, StrLen(KeySym), WorkingSpace, WorkingSpace+255, &(KeyPresses[i]))) 
+		ProcessCrayonization(Out, NULL, 0, NULL, &(KeyPresses[i]));
 		{
-			DestroyString(WorkingSpace);
 			return(TRUE);
 		}
 	}
 }
 
-	DestroyString(WorkingSpace);
 	return(FALSE);
 }
+
+
 
 int KeypressProcess(STREAM *StdIn, STREAM *Out)
 {

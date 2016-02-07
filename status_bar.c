@@ -103,9 +103,7 @@ return((TStatusBar *) Curr->Item);
 void UpdateStatusBars(int ForceUpdate)
 {
 TStatusBar *SB;
-time_t Now;
 
-time(&Now);
 SB=(TStatusBar *) StatusBarPopStack(g_TopSB);
 if (SB && (ForceUpdate || (Now > SB->NextRefresh))) 
 {

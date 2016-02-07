@@ -4,10 +4,6 @@
 #include "text_substitutions.h"
 
 
-int ProcessCrayonization(STREAM *Pipe, char *Line, int Len, int *Attribs, TCrayon *Crayon);
-
-
-
 int IsInStringList(char *Item, char *List, char *Separator) 
 {
 char *Token=NULL, *ptr;
@@ -764,17 +760,11 @@ if (GlobalFlags & FLAG_DONTCRAYON) return(FALSE);
 		}
 	break;
 
+	case CRAYON_TIMER:
 	//Key presses will already have been matched
 	case CRAYON_KEYPRESS:
 		ProcessSubactions(Pipe, AttribLine, Line, Len, MatchStart, MatchEnd, Crayon);
 		result=TRUE;
-/*
-	for (i=0; i < Crayon->ActionCount; i++)
-	{
-		ApplySingleAction(Pipe, AttribLine, Line, Len, MatchStart, MatchEnd, &Crayon->Actions[i]);
-		result=TRUE;
-	}
-*/		
 	break;
 
 	default:
@@ -845,10 +835,24 @@ DestroyString(Tempstr);
 }
 
 
+
+
 int ProcessCrayonization(STREAM *Pipe, char *Line, int Len, int *Attribs, TCrayon *Crayon)
 {
  char *p_SectionStart, *p_SectionEnd, *ptr;
+ char *WorkingSpace=NULL;
+ int *WorkingAttribs=NULL;
  int result=FALSE;
+
+	if (Len==0)
+	{
+		// Working space is provided so that we can 'replace' text 
+		WorkingSpace=SetStrLen(WorkingSpace,255);
+		Line=WorkingSpace;
+		WorkingAttribs=(int *) calloc(255,sizeof(int));
+		Attribs=WorkingAttribs;
+		Len=255;
+	}
 
 	switch (Crayon->Type)
 	{
@@ -860,15 +864,22 @@ int ProcessCrayonization(STREAM *Pipe, char *Line, int Len, int *Attribs, TCrayo
 	}
 	break;
 
+	case CRAYON_TIMER:
 	case CRAYON_ACTION:
 	case CRAYON_IF:
 	case CRAYON_LINENO:
+	case CRAYON_KEYPRESS:
 	result=ApplyActions(Pipe, Attribs, Line, Len, Line, Line+Len, Crayon);
 	break;
 
 	case CRAYON_SECTION:
 	ptr=Line+Len;
-	if (Line+Crayon->Start >= ptr) return; 
+	if (Line+Crayon->Start >= ptr) 
+	{
+		DestroyString(WorkingSpace);
+		DestroyString(WorkingAttribs);
+		return(FALSE); 
+	}
 	p_SectionStart=Line+Crayon->Start;
 	if ((p_SectionStart+Crayon->Len) > ptr) p_SectionEnd=ptr;
 	else p_SectionEnd=p_SectionStart+Crayon->Len;
@@ -887,6 +898,9 @@ int ProcessCrayonization(STREAM *Pipe, char *Line, int Len, int *Attribs, TCrayo
 	break;
 	}
 
+	DestroyString(WorkingSpace);
+	DestroyString(WorkingAttribs);
+
 return(result);
 }
 
@@ -896,8 +910,8 @@ void ColorLine(STREAM *Pipe, char *Line, int Len, ListNode *ColorMatches)
 int *Attribs=NULL;
 ListNode *Curr;
 
-Attribs=(int *) calloc(Len,sizeof(int));
 
+Attribs=(int *) calloc(Len,sizeof(int));
 Curr=ListGetNext(ColorMatches);
 while (Curr)
 {

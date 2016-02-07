@@ -10,7 +10,7 @@ FLAGS=$(CFLAGS) @DEFS@
 
 
 
-OBJ=common.o config_file.o help.o crayonizations.o text_substitutions.o status_bar.o xterm.o keypress.o signals.o
+OBJ=common.o config_file.o help.o crayonizations.o text_substitutions.o status_bar.o xterm.o keypress.o signals.o timers.o
 
 all: $(OBJ) main.c common.h
 	@cd libUseful-2.3; $(MAKE)
@@ -42,6 +42,10 @@ text_substitutions.o: text_substitutions.c text_substitutions.h common.h
 
 status_bar.o: status_bar.c status_bar.h common.h
 	gcc -c status_bar.c
+
+timers.o: timers.c timers.h common.h
+	gcc -c timers.c
+
 
 clean:
 	@rm -f crayonizer *.o libUseful-2.3/*.o libUseful-2.3/*.a libUseful-2.3/*.so

@@ -1,6 +1,6 @@
 //Crayonizer. A coloration/formatting app for command-line output
 //Written by Colum Paget.
-//Copyright 2.33 Colum Paget.
+//Copyright 2013 Colum Paget.
 
 /****  Gnu Public Licence ****/
 /*
@@ -27,10 +27,9 @@
 #define CLRSCR "\x1b[2J\x1b[;H"
 #define CTRLO 15
 
-char *Version="0.0.9";
+char *Version="1.0";
 int GlobalFlags=0;
 time_t StartTime=0;
-
 
 
 //This handles ANSI sequences that start ESC[, these are 'Control Sequence Introducer' (CSI) codes 
@@ -258,7 +257,7 @@ int ColorProgramOutput(STREAM *Pipe, ListNode *ColorMatches)
 		}
 
 		//By now, whatever happens, we'll have drawn our line, so if we need to 
-		//refresh status bars becuase we cleared the screen, then we do so here
+		//refresh status bars because we cleared the screen, then we do so here
 		if (GlobalFlags & FLAG_REDRAW)
 		{
 			UpdateStatusBars(TRUE);
@@ -446,11 +445,20 @@ struct timeval tv;
 STREAM *S;
 int result;
 
+time(&Now);
+tv.tv_sec=1;
+tv.tv_usec=0;
+
 while (1)
 {
-  tv.tv_sec=1;
-  tv.tv_usec=0;
   S=STREAMSelect(Streams,&tv);
+
+	if ((tv.tv_sec==0) && (tv.tv_usec==0))
+	{
+		tv.tv_sec=1;
+		tv.tv_usec=0;
+		Now++;
+	}
 
   if (S)
   {
@@ -461,6 +469,7 @@ while (1)
   }
   else UpdateStatusBars(FALSE);
   PropogateSignals(CommandPipe);
+	ProcessTimers(CommandPipe);
 }
 }
 

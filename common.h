@@ -66,7 +66,7 @@ uint8_t Type;
 uint8_t ActType;
 char *Match;
 char Op;
-float Value;
+double Value;
 uint8_t Start, Len;
 char *String;
 unsigned int Attribs;
@@ -74,6 +74,8 @@ unsigned int Flags; //flags that are not attributes. Status bar flags etc
 unsigned int ActionCount;
 TCrayon *Actions;
 }; 
+
+
 
 
 extern char *Version;
@@ -88,6 +90,7 @@ extern char **cmdline_argv;
 extern char *CrayonizerMMap;
 extern STREAM *StdIn, *CommandPipe;
 extern ListNode *ColorMatches, *Streams, *Functions;
+extern time_t Now;
 
 void CrayonizerProcessInputs();
 
