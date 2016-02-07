@@ -1,6 +1,7 @@
 #include "xterm.h"
 #include "status_bar.h"
 #include "crayonizations.h"
+#include "text_substitutions.h"
 
 
 int ProcessCrayonization(STREAM *Pipe, char *Line, int Len, int *Attribs, TCrayon *Crayon);
@@ -403,7 +404,7 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 
 
 		case ACTION_REPLACE:
-		strcpy(MatchStart,Action->String);
+		strncpy(MatchStart,Action->String,MatchEnd-MatchStart);
 		break;
 
 		case ACTION_SETENV:
@@ -493,10 +494,9 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 		break;
 
 		case ACTION_SET_XTITLE: 
-			Tempstr=CopyStr(Tempstr,"\x1b]2;");
-			Tempstr=CatStrLen(Tempstr,MatchStart,end-start);
-			StripTrailingWhitespace(Tempstr);
-			Tempstr=CatStr(Tempstr,"\x07");
+			EnvName=SubstituteTextValues(EnvName, MatchStart, end-start);
+			StripTrailingWhitespace(EnvName);
+			Tempstr=MCopyStr(Tempstr,"\x1b]2;",EnvName,"\x07", NULL);
 			write(1,Tempstr,StrLen(Tempstr));
 		break;
 
