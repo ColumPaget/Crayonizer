@@ -1,0 +1,411 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+<head>
+  <meta name="viewport" content="width=device-width; initial-scale=1.0; maximum-scape=1.0; user-scalable=false;">
+  <link rel="apple-touch-icon" href="/phil/avatar-iphone.png">
+  <title>Terminal Function Key Escape Codes :: Phil! Gold</title>
+
+  <meta name="DC.title" content="Phil! Gold">
+
+  <link rel="openid2.provider" href="https://www.google.com/accounts/o8/ud" />
+  <link rel="openid2.local_id" href="https://plus.google.com/116471799767513262335" />
+  <!-- Old one preserved, because some sites use the provider as an account key (bad them). -->
+  <!--link rel="openid.server" href="http://www.livejournal.com/openid/server.bml"-->
+  <!--link rel="openid.delegate" href="http://phil-g.livejournal.com/"-->
+
+  <link rel="alternate" type="application/rss+xml" title="RSS" href="http://aperiodic.net/phil/archives/index.rss">
+  <link rel="stylesheet" type="text/css" href="/phil/default.css">
+  <link rel="stylesheet" type="text/css" href="/phil/blog.css">
+
+</head>
+
+<body>
+
+<div id="header">
+  <h1>Terminal Function Key Escape Codes</h1>
+</div>
+
+<div id="content">
+<h2>Tue, 13 Dec 2005</h2>
+
+<div class="story-title" id="term-function-keys">
+  <h3>Terminal Function Key Escape Codes</h3>
+  <div class="title-links">
+    2:11PM |
+    <a href="http://aperiodic.net/phil/archives/Geekery" >Geekery</a> |
+    
+    <a href="http://aperiodic.net/phil/archives/Geekery/term-function-keys.html" title="permalink for Terminal Function Key Escape Codes" rel="bookmark">#</a>
+  </div>
+</div>
+
+<p>I recently had the pleasure of trying to figure out a friend's terminal
+woes.  His function keys weren't behaving properly.  It turns out that his
+terminal was sending escape codes that differed from the terminfo
+definition his terminal was using.  I set out to find what the correct
+solution was.  These are my results.  (Note that I use Debian GNU/Linux.
+Some of this may be Debian-specific.)</p>
+
+<p>Most terminal emulators these days emulate some superset of a <a href="http://vt100.net/">DEC
+VT100</a>.  (Not all of them emulate a VT100 exactly, though.  cf.
+<a href="http://invisible-island.net/vttest/">vttest</a>.)  The VT100 didn't have function keys in the sense that it
+didn't have keys labeled F1, F2, F3, etc.  It did, however, have four keys
+over the numeric keypad labeled PF1 through PF4.  These keys are generally
+regarded as analogous to F1 through F4 on a modern keyboard.  They
+generated escape codes <code>^[OP</code> through <code>^[OS</code>.  The appropriate $TERM type
+for a VT100 is <code>vt100</code>.</p>
+
+<p>One of the best well known terminal emulators around, xterm, actually
+emulates (or strives to emulate) a DEC VT220.  I'll get to xterm in a bit,
+but the VT220 was a more advanced terminal than the VT100.  Among other
+things, it had twenty function keys, labeled F1 through F20.  The first
+five were strictly for local terminal functions; the host never saw any
+escape codes from them.  The remainder (F6 through F20) sent escape codes
+<code>^[[17~</code> to <code>^[[21~</code>, <code>^[[23~</code> to <code>^[[26~</code>, <code>^[[28~</code>, <code>^[[29~</code>, and
+<code>^[[31~</code> to <code>^[[34~</code>.  The appropriate $TERM type for a VT220 is <code>vt220</code>.
+(Note that, on my system, the vt220 $TERM type actually defines VT100
+escape codes for F1 through F4.  There's no definition for F5.)</p>
+
+<p>This brings me to <a href="http://dickey.his.com/xterm/xterm.html">xterm</a>.  xterm has a long history, and the function
+key definitions have changed over time.  The original xterm from the X
+Consortium (even before they became the Open Group) used escape codes
+based on the VT220, but extended to cover the range from F1 to F48.  F1
+through F12 generated, respectively, codes <code>^[[11~</code> to <code>^[[15~</code>, <code>^[[17~</code>
+to <code>^[[21~</code>, <code>^[[23~</code>, and <code>^[[24~</code>.  Shift-F1 through Shift-F12 were used
+for F13 through F24, and generated codes from <code>^[[11;2~</code> to <code>^[[24;2~</code>.
+Similarly Ctrl-F1 through Ctrl-F12 were used for F25 through F36 and
+generated codes <code>^[[11;5~</code> to <code>^[[24;5~</code>, and Ctrl-Shift-F1 through
+Ctrl-Shift-F12 were used for F37 through F48 and generated codes
+<code>^[[11;6~</code> to <code>^[[24;6~</code>.  None of the base xterm $TERM types on my system
+correspond to this series of escape codes, though you can still get xterm
+to exhibit the old behavior by setting the OldXtermFKeys resource to
+'<code>true</code>'.</p>
+
+<p>The current XFree86 xterm mixes VT100 and VT220.  Since the original VT220
+didn't have F1 through F5, the XFree86 xterm uses the escape sequences
+from the VT100's PF1 through PF4 for F1 through F4 while retaining the
+VT220-based escape sequences from the X Consortium xterm for F5 through
+F12.  So the differences from the earlier xterms are: F1 through F4
+generate escape codes <code>^[OP</code> through <code>^[OS</code>, F13 to F16 generate <code>^[O2P</code>
+to <code>^[O2S</code>, F25 to F28 generate <code>^[O5P</code> to <code>^[O5S</code>, and F37 to F40
+generate <code>^[O6P</code> to <code>^[O6S</code>.  On my system, the $TERM types that have the
+appropriate function key definitions are <code>xterm</code>, <code>xterm-debian</code>,
+<code>xterm-mono</code>, and <code>xterm-xfree86</code>.</p>
+
+<p>The GNOME project's terminal emulator is <a href="http://www.gnome.org/softwaremap/projects/gnome-terminal">gnome-terminal</a>.  It generates
+the exact same escape codes as the XFree86 xterm and will work with the
+same $TERM settings.  Note, however, that some function keys are bound to
+gnome-terminal actions and will not be passed through to applications
+running in the terminal.  (For example, F1 calls up the GNOME help browser
+to view the gnome-terminal documentation.)</p>
+
+<p><a href="http://multignometerm.sourceforge.net/">multi-gnome-terminal</a> is based on gnome-terminal, but it implements
+multiple tabbed terminal sessions in a single window.  It also does the
+function keys a little differently, though it's a bit more like the
+original VT220.  F1 through F12 behave exactly the same as the XFree86
+xterm.  Shift-F1 through Shift-F10 function as F11 through F20 and
+generate escape codes from <code>^[[23~</code> to <code>^[[34~</code>, just like the VT220.
+Note that this means there are two ways to get F11 and F12. (Actually,
+there are three, since Shift-F11 and Shift-F12 are <em>also</em> equivalent to
+F11 and F12.)  On my system, the $TERM types with the appropriate function
+key definitions are <code>xterm-color</code>, <code>xterm-r6</code>, and <code>xterm-vt220</code>.  xterm
+can be made to behave like this by setting the SunKeyboard resource to
+'<code>true</code>'.  Note that, like gnome-terminal, multi-gnome-terminal binds some
+function keys for its own use and may not pass then through to the
+programs in the terminal.</p>
+
+<p><a href="http://www.rxvt.org/">rxvt</a> is a very popular xterm replacement.  It uses the same escape
+sequences at the X11R6 xterm for F1 through F12.  Shift-F1 through
+Shift-F12 work similarly to multi-gnome-terminal; they add ten to the
+number on the key (so there are again two ways to get F11 and F12).  rxvt
+generates the same escape sequences as multi-gnome-terminal for F11
+through F20, and uses <code>^[[23&#036;</code> and <code>^[[24&#036;</code> for F21 and F22, respectively.
+The sequence continues with Ctrl-F1 through Ctrl-F12 generating <code>^[[11^</code>
+through <code>^[[24^</code> for F23 through F34 (no overlap with previous sequences),
+Ctrl-Shift-F1 through Ctrl-Shift-F10 generating <code>^[[23^</code> through <code>^[[34^</code>
+for F33 through F42 (two-key overlap), and Ctrl-Shift-F11 and
+Ctrl-Shift-F12 generating <code>^[[23@</code> and <code>^[[24@</code> for F43 and F44.  The base
+$TERM type for rxvt is <code>rxvt</code>, though it ships with several types for
+different circumstances, including <code>rxvt-basic</code> and <code>rxvt-m</code>.  It also
+comes with <code>rxvt-unicode</code>, but on my system that definition only lists
+function keys up to F20.</p>
+
+<p><a href="http://www.gnu.org/software/screen/">GNU screen</a> is also a terminal emulator, though it expects to run
+within another terminal environment (as opposed to displaying text in a
+graphical environment like xterm or displaying text on physical hardware
+like an actual terminal).  As such, it translates many escape sequences
+from its containing terminal environment to the VT100-like environment it
+provides.  It will recognize and translate the sequences for F1 through
+F12.  For those, it will generate the same escape codes as the XFree86
+xterm.  It does not recognize F13 and above; those escape codes will pass
+through unchanged to the programs running within screen.  (Note that the
+screen 'bindkey' command has a -k option that uses termcap capabilities to
+represent keys.  It understands k1 through FA, which correspond to F1
+through F20.)  The $TERM type for screen is <code>screen</code>.</p>
+
+<table border=1>
+  <tr>
+    <th>key</th>
+    <th>VT100</th>
+    <th>VT220</th>
+    <th>X11R6 xterm</th>
+    <th>XFree86 xterm</th>
+    <th>rxvt</th>
+    <th>MGT</th>
+    <th>screen</th>
+  </tr>
+  <tr><td>F1</td><td>^[OP</td>       <td rowspan=5></td> <td>^[[11~</td>  <td>^[OP</td>    <td>^[[11~</td><td>^[OP</td>       <td>^[OP</td>       </tr>
+  <tr><td>F2</td><td>^[OQ</td>                           <td>^[[12~</td>  <td>^[OQ</td>    <td>^[[12~</td><td>^[OQ</td>       <td>^[OQ</td>       </tr>
+  <tr><td>F3</td><td>^[OR</td>                           <td>^[[13~</td>  <td>^[OR</td>    <td>^[[13~</td><td>^[OR</td>       <td>^[OR</td>       </tr>
+  <tr><td>F4</td><td>^[OS</td>                           <td>^[[14~</td>  <td>^[OS</td>    <td>^[[14~</td><td>^[OS</td>       <td>^[OS</td>       </tr>
+  <tr><td>F5</td><td rowspan=44></td>                    <td>^[[15~</td>  <td>^[[15~</td>  <td>^[[15~</td><td>^[[15~</td>     <td>^[[15~</td>     </tr>
+  <tr><td>F6</td>                    <td>^[[17~</td>     <td>^[[17~</td>  <td>^[[17~</td>  <td>^[[17~</td><td>^[[17~</td>     <td>^[[17~</td>     </tr>
+  <tr><td>F7</td>                    <td>^[[18~</td>     <td>^[[18~</td>  <td>^[[18~</td>  <td>^[[18~</td><td>^[[18~</td>     <td>^[[18~</td>     </tr>
+  <tr><td>F8</td>                    <td>^[[19~</td>     <td>^[[19~</td>  <td>^[[19~</td>  <td>^[[19~</td><td>^[[19~</td>     <td>^[[19~</td>     </tr>
+  <tr><td>F9</td>                    <td>^[[20~</td>     <td>^[[20~</td>  <td>^[[20~</td>  <td>^[[20~</td><td>^[[20~</td>     <td>^[[20~</td>     </tr>
+  <tr><td>F10</td>                   <td>^[[21~</td>     <td>^[[21~</td>  <td>^[[21~</td>  <td>^[[21~</td><td>^[[21~</td>     <td>^[[21~</td>     </tr>
+  <tr><td>F11</td>                   <td>^[[23~</td>     <td>^[[23~</td>  <td>^[[23~</td>  <td>^[[23~</td><td>^[[23~</td>     <td>^[[23~</td>     </tr>
+  <tr><td>F12</td>                   <td>^[[24~</td>     <td>^[[24~</td>  <td>^[[24~</td>  <td>^[[24~</td><td>^[[24~</td>     <td>^[[24~</td>     </tr>
+  <tr><td>F13</td>                   <td>^[[25~</td>     <td>^[[11;2~</td><td>^[O2P</td>   <td>^[[25~</td><td>^[[25~</td>     <td rowspan=36></td></tr>
+  <tr><td>F14</td>                   <td>^[[26~</td>     <td>^[[12;2~</td><td>^[O2Q</td>   <td>^[[26~</td><td>^[[26~</td>                         </tr>
+  <tr><td>F15</td>                   <td>^[[28~</td>     <td>^[[13;2~</td><td>^[O2R</td>   <td>^[[28~</td><td>^[[28~</td>                         </tr>
+  <tr><td>F16</td>                   <td>^[[29~</td>     <td>^[[14;2~</td><td>^[O2S</td>   <td>^[[29~</td><td>^[[29~</td>                         </tr>
+  <tr><td>F17</td>                   <td>^[[31~</td>     <td>^[[15;2~</td><td>^[[15;2~</td><td>^[[31~</td><td>^[[31~</td>                         </tr>
+  <tr><td>F18</td>                   <td>^[[32~</td>     <td>^[[17;2~</td><td>^[[17;2~</td><td>^[[32~</td><td>^[[32~</td>                         </tr>
+  <tr><td>F19</td>                   <td>^[[33~</td>     <td>^[[18;2~</td><td>^[[18;2~</td><td>^[[33~</td><td>^[[33~</td>                         </tr>
+  <tr><td>F20</td>                   <td>^[[34~</td>     <td>^[[19;2~</td><td>^[[19;2~</td><td>^[[34~</td><td>^[[34~</td>                         </tr>
+  <tr><td>F21</td>                   <td rowspan=28></td><td>^[[20;2~</td><td>^[[20;2~</td><td>^[[23$</td><td rowspan=28></td>                    </tr>
+  <tr><td>F22</td>                                       <td>^[[21;2~</td><td>^[[21;2~</td><td>^[[24$</td>                                        </tr>
+  <tr><td>F23</td>                                       <td>^[[23;2~</td><td>^[[23;2~</td><td>^[[11^</td>                                        </tr>
+  <tr><td>F24</td>                                       <td>^[[24;2~</td><td>^[[24;2~</td><td>^[[12^</td>                                        </tr>
+  <tr><td>F25</td>                                       <td>^[[11;5~</td><td>^[O5P</td>   <td>^[[13^</td>                                        </tr>
+  <tr><td>F26</td>                                       <td>^[[12;5~</td><td>^[O5Q</td>   <td>^[[14^</td>                                        </tr>
+  <tr><td>F27</td>                                       <td>^[[13;5~</td><td>^[O5R</td>   <td>^[[15^</td>                                        </tr>
+  <tr><td>F28</td>                                       <td>^[[14;5~</td><td>^[O5S</td>   <td>^[[17^</td>                                        </tr>
+  <tr><td>F29</td>                                       <td>^[[15;5~</td><td>^[[15;5~</td><td>^[[18^</td>                                        </tr>
+  <tr><td>F30</td>                                       <td>^[[17;5~</td><td>^[[17;5~</td><td>^[[19^</td>                                        </tr>
+  <tr><td>F31</td>                                       <td>^[[18;5~</td><td>^[[18;5~</td><td>^[[20^</td>                                        </tr>
+  <tr><td>F32</td>                                       <td>^[[19;5~</td><td>^[[19;5~</td><td>^[[21^</td>                                        </tr>
+  <tr><td>F33</td>                                       <td>^[[20;5~</td><td>^[[20;5~</td><td>^[[23^</td>                                        </tr>
+  <tr><td>F34</td>                                       <td>^[[21;5~</td><td>^[[21;5~</td><td>^[[24^</td>                                        </tr>
+  <tr><td>F35</td>                                       <td>^[[23;5~</td><td>^[[23;5~</td><td>^[[25^</td>                                        </tr>
+  <tr><td>F36</td>                                       <td>^[[24;5~</td><td>^[[24;5~</td><td>^[[26^</td>                                        </tr>
+  <tr><td>F37</td>                                       <td>^[[11;6~</td><td>^[O6P</td>   <td>^[[28^</td>                                        </tr>
+  <tr><td>F38</td>                                       <td>^[[12;6~</td><td>^[O6Q</td>   <td>^[[29^</td>                                        </tr>
+  <tr><td>F39</td>                                       <td>^[[13;6~</td><td>^[O6R</td>   <td>^[[31^</td>                                        </tr>
+  <tr><td>F40</td>                                       <td>^[[14;6~</td><td>^[O6S</td>   <td>^[[32^</td>                                        </tr>
+  <tr><td>F41</td>                                       <td>^[[15;6~</td><td>^[[15;6~</td><td>^[[33^</td>                                        </tr>
+  <tr><td>F42</td>                                       <td>^[[17;6~</td><td>^[[17;6~</td><td>^[[34^</td>                                        </tr>
+  <tr><td>F43</td>                                       <td>^[[18;6~</td><td>^[[18;6~</td><td>^[[23@</td>                                        </tr>
+  <tr><td>F44</td>                                       <td>^[[19;6~</td><td>^[[19;6~</td><td>^[[24@</td>                                        </tr>
+  <tr><td>F45</td>                                       <td>^[[20;6~</td><td>^[[20;6~</td><td rowspan=4></td>                              </tr>
+  <tr><td>F46</td>                                       <td>^[[21;6~</td><td>^[[21;6~</td>                                                 </tr>
+  <tr><td>F47</td>                                       <td>^[[23;6~</td><td>^[[23;6~</td>                                                 </tr>
+  <tr><td>F48</td>                                       <td>^[[24;6~</td><td>^[[24;6~</td>                                                 </tr>
+</table>
+
+
+</div>
+
+<div id="sidebar">
+  <h2>Static</h2>
+  <ul>
+    <li><a href="/phil/prompt/">zsh prompt</a></li>
+    <li><a href="/phil/pgp/">PGP</a></li>
+    <li><a href="/phil/ssh/">SSH</a></li>
+    <li><a href="/phil/MTA/">MTA</a></li>
+    <li><a href="/phil/tutorials/">tutorials</a></li>
+    <li><a href="/phil/configs/">config files</a></li>
+    <li><a href="http://www.flickr.com/photos/phil_g/sets/1671829/">desktop</a></li>
+    <li><a href="http://www.librarything.com/catalog/asciiphil">books I own</a></li>
+    <li><a href="/phil/stuff/">stuff I'm giving away</a></li>
+    <li><a href="/phil/drwho/">Dr. Who eps I have</a></li>
+    <li><a href="http://del.icio.us/phil_g">bookmarks</a></li>
+    <li><a href="http://www.flickr.com/photos/phil_g/">photos</a></li>
+    <li><a href="/phil/about.html">about</a></li>
+  </ul>
+
+  <h2>Directory</h2>
+  <ul class="categories">
+<li><a href="http://aperiodic.net/phil/archives/index.html">Root</a> (138)
+<ul>
+<li><a href="http://aperiodic.net/phil/archives/Books/index.html">Books</a> (32)
+</li>
+<li><a href="http://aperiodic.net/phil/archives/Events/index.html">Events</a> (7)
+<ul>
+<li><a href="http://aperiodic.net/phil/archives/Events/Burning_Man/index.html">Burning Man</a> (3)
+</li>
+<li><a href="http://aperiodic.net/phil/archives/Events/Camping/index.html">Camping</a> (2)
+</li>
+<li><a href="http://aperiodic.net/phil/archives/Events/PDF/index.html">PDF</a> (2)
+</li>
+</ul>
+</li>
+<li class="this-category">Geekery (32)
+<ul>
+<li><a href="http://aperiodic.net/phil/archives/Geekery/Test/index.html">Test</a> (3)
+</li>
+</ul>
+</li>
+<li><a href="http://aperiodic.net/phil/archives/General/index.html">General</a> (23)
+</li>
+<li><a href="http://aperiodic.net/phil/archives/Links/index.html">Links</a> (12)
+<ul>
+<li><a href="http://aperiodic.net/phil/archives/Links/Slashdot/index.html">Slashdot</a> (1)
+</li>
+</ul>
+</li>
+<li><a href="http://aperiodic.net/phil/archives/MTA/index.html">MTA</a> (22)
+</li>
+<li><a href="http://aperiodic.net/phil/archives/Recipes/index.html">Recipes</a> (4)
+</li>
+<li><a href="http://aperiodic.net/phil/archives/Video_Games/index.html">Video Games</a> (6)
+<ul>
+<li><a href="http://aperiodic.net/phil/archives/Video_Games/FFXI/index.html">FFXI</a> (1)
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+
+  <h2>Archive</h2>
+  <table class="month-calendar"><caption class="month-calendar-head"><a title="June 2005 (1)" href="http://aperiodic.net/phil/archives/2005/06/">&larr;</a><a title="December 2005 (2)" href="http://aperiodic.net/phil/archives/2005/12/">December</a><a title="June 2006 (4)" href="http://aperiodic.net/phil/archives/2006/06/">&rarr;</a></caption>
+    <tr>
+      <th class="month-calendar-day-head Sunday">Sun</th>
+      <th class="month-calendar-day-head Monday">Mon</th>
+      <th class="month-calendar-day-head Tuesday">Tue</th>
+      <th class="month-calendar-day-head Wednesday">Wed</th>
+      <th class="month-calendar-day-head Thursday">Thu</th>
+      <th class="month-calendar-day-head Friday">Fri</th>
+      <th class="month-calendar-day-head Saturday">Sat</th>
+    </tr>
+    <tr>
+      <td class="month-calendar-day-noday Sunday">&nbsp;</td>
+      <td class="month-calendar-day-noday Monday">&nbsp;</td>
+      <td class="month-calendar-day-noday Tuesday">&nbsp;</td>
+      <td class="month-calendar-day-noday Wednesday">&nbsp;</td>
+<td class="month-calendar-day-nolink Thursday">1</td>
+<td class="month-calendar-day-nolink Friday">2</td>
+<td class="month-calendar-day-nolink Saturday">3</td>
+</tr>
+    <tr>
+<td class="month-calendar-day-nolink Sunday">4</td>
+<td class="month-calendar-day-nolink Monday">5</td>
+<td class="month-calendar-day-nolink Tuesday">6</td>
+<td class="month-calendar-day-nolink Wednesday">7</td>
+<td class="month-calendar-day-nolink Thursday">8</td>
+<td class="month-calendar-day-nolink Friday">9</td>
+<td class="month-calendar-day-nolink Saturday">10</td>
+</tr>
+    <tr>
+<td class="month-calendar-day-nolink Sunday">11</td>
+<td class="month-calendar-day-nolink Monday">12</td>
+<td class="month-calendar-day-this-day Tuesday"><a title="Tuesday, 13 December 2005 (current) (2)" href="http://aperiodic.net/phil/archives/2005/12/13/">13</a></td>
+<td class="month-calendar-day-nolink Wednesday">14</td>
+<td class="month-calendar-day-nolink Thursday">15</td>
+<td class="month-calendar-day-nolink Friday">16</td>
+<td class="month-calendar-day-nolink Saturday">17</td>
+</tr>
+    <tr>
+<td class="month-calendar-day-nolink Sunday">18</td>
+<td class="month-calendar-day-nolink Monday">19</td>
+<td class="month-calendar-day-nolink Tuesday">20</td>
+<td class="month-calendar-day-nolink Wednesday">21</td>
+<td class="month-calendar-day-nolink Thursday">22</td>
+<td class="month-calendar-day-nolink Friday">23</td>
+<td class="month-calendar-day-nolink Saturday">24</td>
+</tr>
+    <tr>
+<td class="month-calendar-day-nolink Sunday">25</td>
+<td class="month-calendar-day-nolink Monday">26</td>
+<td class="month-calendar-day-nolink Tuesday">27</td>
+<td class="month-calendar-day-nolink Wednesday">28</td>
+<td class="month-calendar-day-nolink Thursday">29</td>
+<td class="month-calendar-day-nolink Friday">30</td>
+<td class="month-calendar-day-nolink Saturday">31</td>
+</tr>
+</table>
+
+  <table class="year-calendar"><caption class="year-calendar-head">&larr;<a title="2005 (104)" href="http://aperiodic.net/phil/archives/2005/">2005</a><a title="2006 (6)" href="http://aperiodic.net/phil/archives/2006/">&rarr;</a></caption><tr><th class="year-calendar-subhead" colspan="6">Months</th></tr>
+<tr>
+<td class="year-calendar-month-nolink">Jan</td>
+<td class="year-calendar-month-nolink">Feb</td>
+<td class="year-calendar-month-link"><a title="March 2005 (101)" href="http://aperiodic.net/phil/archives/2005/03/">Mar</a></td>
+<td class="year-calendar-month-nolink">Apr</td>
+<td class="year-calendar-month-nolink">May</td>
+<td class="year-calendar-month-link"><a title="June 2005 (1)" href="http://aperiodic.net/phil/archives/2005/06/">Jun</a></td>
+</tr>
+<tr>
+<td class="year-calendar-month-nolink">Jul</td>
+<td class="year-calendar-month-nolink">Aug</td>
+<td class="year-calendar-month-nolink">Sep</td>
+<td class="year-calendar-month-nolink">Oct</td>
+<td class="year-calendar-month-nolink">Nov</td>
+<td class="year-calendar-this-month"><a title="December 2005 (2)" href="http://aperiodic.net/phil/archives/2005/12/">Dec</a></td></tr>
+</table>
+
+
+  <h2>Search</h2>
+  <form method="GET" action="http://www.google.com/custom">
+    <p style="text-align: center">
+      <input type="hidden" name="domains" value="aperiodic.net">
+      <input type="hidden" name="cof" VALUE="GALT:#66CC6;S:http://aperiodic.net/phil/;GL:2;VLC:#CC66CC;AH:center;BGC:#000000;LC:#6666CC;GFNT:#666666;ALC:#CC6666;T:#CCCCCC;GIMP:#FFFFFF;AWFID:d3f1afbc39619250;">
+      <input type="hidden" name="sitesearch" value="aperiodic.net">
+      <input name="q" type="text" size="25" maxlength="255" style="width: 10em"><br>
+      Powered by <a href="http://www.google.com/"><span class="google-G1">G</span><span class="google-o1">o</span><span class="google-o2">o</span><span class="google-g2">g</span><span class="google-l">l</span><span class="google-e">e</span></a>
+    </p>
+  </form>
+
+
+  <h2>Currently Reading</h2>
+
+  <div id="wb55a1f3ca64835526140c06560a0205e"></div>
+  <script type="text/javascript" charset="UTF-8"
+          src="http://www.librarything.com/widget_get.php?userid=asciiphil&theID=wb55a1f3ca64835526140c06560a0205e">
+  </script>
+
+  <h2>Recent Books</h2>
+
+  <div id="wa13cfbb5a4be4d629ebe322b83f1e2f6"></div>
+  <script type="text/javascript" charset="UTF-8"
+          src="http://www.librarything.com/widget_get.php?userid=asciiphil&theID=wa13cfbb5a4be4d629ebe322b83f1e2f6">
+  </script>
+
+</div>
+
+<div class="hr"><hr></div>
+<address><a href="mailto:phil_g@pobox.com">Phil! Gold</a></address>
+<p class="footer">
+<a href="/phil/">Back to main page.</a><br>
+</p>
+<ul class="validation">
+  <li>
+  <a href="http://validator.w3.org/check/referer">
+  <img src="/phil/pics/html401.png" alt="Valid HTML 4.01">
+  </a>
+  </li>
+
+  <li>
+  <a href="http://jigsaw.w3.org/css-validator/check/referer">
+  <img src="/phil/pics/validcss.png" alt="Valid CSS 2">
+  </a>
+  </li>
+
+  <li>
+  <a href="http://aperiodic.net/phil/archives/index.rss">
+  <img src="/phil/pics/rss10.png" alt="RSS syndication">
+  </a>
+  </li>
+
+  <li>
+  <a href="http://feedvalidator.org/check?url=http://aperiodic.net/phil/archives/index.rss">
+  <img src="/phil/pics/validrss.png" alt="Valid RSS 1.0">
+  </a>
+  </li>
+
+</ul>
+
+</html>

@@ -3,7 +3,7 @@
 #include "status_bar.h"
 
 const char *Colors[]={"none","black","red","green","yellow","blue","magenta","cyan","white","none","none","darkgrey","lightred","lightgreen","lightyellow","lightblue","lightmagenta","lightcyan","lightgrey",NULL};
-const char *CrayonTypes[]={"action","args","line","string","section","lineno","value","mapto","linemapto","append","prepend","onstart","onexit","cmdline","passinput","include","keypress","if","statusbar","edit",NULL};
+const char *CrayonTypes[]={"action","args","line","string","section","lineno","value","mapto","linemapto","append","prepend","onstart","onexit","cmdline","passinput","include","keypress","if","statusbar","timer","edit",NULL};
 
 
 char *ParseAttribs(char *Verbs, TCrayon *Crayon, TCrayon **Action);
@@ -407,6 +407,7 @@ switch (Item->Type)
 	case CRAYON_CMDLINE:
 	case CRAYON_IF:
 	case CRAYON_KEYPRESS:
+	case CRAYON_TIMER:
 		ptr=ParseActionToken(Args, Item);
 	break;
 
@@ -540,6 +541,13 @@ ListNode *Curr;
 			{
 				GlobalFlags |= HAS_FOCUS;
 				Crayon=KeypressParse(Tempstr);
+			}
+			else if (strcasecmp(Token,"timer")==0)
+			{
+				if (! Timers) Timers=ListCreate();
+		 		Crayon=(TCrayon *) calloc(1,sizeof(TCrayon));
+				ParseCrayonEntry(Crayon,Token,ptr);
+				ListAddNamedItem(Timers, Crayon->Match, Crayon);
 			}
 			else if (strcasecmp(Token,"stripansi")==0) GlobalFlags |= FLAG_STRIP_ANSI;
 			else if (strcasecmp(Token,"command")==0) SetVar(Vars,"ReplaceCommand",ptr);
