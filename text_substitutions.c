@@ -1,5 +1,6 @@
 #include "text_substitutions.h"
 #include <sys/mman.h>
+#include <sys/statvfs.h>
 
 
 #define SYS_STAT_PATH "/proc/stat"
@@ -85,6 +86,14 @@ DestroyString(Tempstr);
 return(val);
 }
 
+
+double GetRootFSUsage()
+{
+struct statvfs FSStat;
+
+statvfs("/",&FSStat);
+return(100.0 - (double) (FSStat.f_bavail * 100 / FSStat.f_blocks ));
+}
 
 
 char *GetCPUSpeed()
@@ -266,13 +275,19 @@ for (ptr=Text; *ptr != '\0'; ptr++)
 		break;
 
 		// memory usage
-		case 'u': 
+		case 'f': 
 			Tempstr=FormatStr(Tempstr,"%0.1f",GetMemUsage());
 			tptr=Tempstr;
 			len+=StrLen(tptr);
 			RetStr=CatStr(RetStr,tptr);
 		break;
 
+		case 'F':
+			Tempstr=FormatStr(Tempstr,"%0.1f",GetRootFSUsage());
+			tptr=Tempstr;
+			len+=StrLen(tptr);
+			RetStr=CatStr(RetStr,tptr);
+		break;
 	}
 	break;
 

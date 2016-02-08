@@ -517,6 +517,7 @@ if (isatty(0))
 {
 	InitTTY(0, 0,TTYFLAG_LFCR|TTYFLAG_IGNSIG);
 	StdIn=STREAMFromFD(0);
+	STREAMSetTimeout(StdIn,10);
 	ListAddItem(Streams,StdIn);
 }
 HandleSigwinch(NULL);

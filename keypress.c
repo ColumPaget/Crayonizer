@@ -189,13 +189,16 @@ char *ptr, *end;
 ptr=Sequence;
 *ptr='\x1b';
 ptr++;
+end=ptr;
+strncpy(KeySym,"escape",MaxLen);
+
 result=STREAMReadBytes(StdIn, ptr,1);
 if (result > 0)
 {
-
 end=ptr+1;
 switch (*ptr)
 {
+	case '\0':
 	case '\x1b':
 		strncpy(KeySym,"escape",MaxLen);
 		return(end-Sequence);

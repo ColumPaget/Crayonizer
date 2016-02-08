@@ -4,7 +4,6 @@ AUTHOR:
 
 CONTACT:
 	Email: colums.projects@gmail.com
-	Blog:  http://idratherhack.blogspot.com
 
 
 DISCLAIMER:
@@ -230,7 +229,7 @@ CRAYONIZER ACTIONS:
 
 	The currently recognized actions for crayonizer are:
 
-		black white red green blue magenta cyan yellow darkgrey lightred lightgreen lightyello lightblue lightmagenta lightcyan bold inverse uppercase lowercase blink caps underline hide basename setenv setxtitle restorextitle passto send echo clrtoeol cleartoeol cls clearscreen altscreen dontcrayon playsound
+		black white red green blue magenta cyan yellow darkgrey lightred lightgreen lightyello lightblue lightmagenta lightcyan bold inverse uppercase lowercase blink caps underline hide basename setenv  passto send echo clrtoeol cleartoeol cls clearscreen altscreen dontcrayon playsound setxtitle restorextitle raise lower iconify deiconify maximize demaximize
 
 	
 	'caps' is a shorthand for 'uppercase'. 
@@ -250,8 +249,6 @@ CRAYONIZER ACTIONS:
 		}
 
 	'hide' suppresses text output. This currently only works on entire lines, but will probably be able to work on substrings in future.
-
-	'setxtitle' sets the title-bar of xterm compliant terminals to the 'matched' text. 'restorextitle' restores it to its value before crayonizer ran.
 
 	'basename' changes the text extraction to the last part of a file path. So, if you match '/home/mydir/myfile.txt' the match will change to 'myfile.txt' and only that bit will be crayonized. 'basename' is positional, so:
 
@@ -282,7 +279,13 @@ CRAYONIZER ACTIONS:
 	'cleartoeol' and 'clrtoeol' will clear to the end of a crayonized line. This is normally used with lines that have a colored background, and where it is desired for this background to traverse the width of the page. Without clearing to the end of the line the colored background would effect only the printed text.
 
 	'cls' and 'clearscreen' will clear the screen
-	
+
+The remaining 	
+
+	'setxtitle' sets the title-bar of xterm compliant terminals to the 'matched' text. 'restorextitle' restores it to its value before crayonizer ran.
+
+	'raise' xterm compliant terminals raise window to the top of the stack
+	'raise' xterm compliant terminals raise window to the top of the stack
 
 PMATCH PATTERN MATCHES:
 	Crayonizer uses it's own 'pmatch' system for pattern matches (I couldn't get my head around regular expressions). This system is 'non greedy', so it matches the shortest string that it can, not the longest like POSIX regular expressions. Pmatch recognizes the following tokens:
