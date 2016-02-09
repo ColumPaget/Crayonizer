@@ -316,7 +316,7 @@ free(Attribs);
 }	
 
 
-char *RebuildPath(char *RetStr, char *Path, char *CurrDir)
+char *RebuildPath(char *RetStr, char *Path, const char *CrayonizerDir)
 {
 char *NewPath=NULL, *Token=NULL, *ptr;
 
@@ -324,7 +324,7 @@ NewPath=CopyStr(RetStr,"");
 ptr=GetToken(Path,":",&Token,0);
 while (ptr)
 {
-  if (strcmp(Token,CurrDir) !=0) NewPath=MCatStr(NewPath,Token,":",NULL);
+  if (strcmp(Token,CrayonizerDir) !=0) NewPath=MCatStr(NewPath,Token,":",NULL);
   ptr=GetToken(ptr,":",&Token,0);
 }
 

@@ -427,7 +427,7 @@ switch (Item->Type)
 	ptr=GetToken(Args,"\\S",&Token,GETTOKEN_QUOTES);
 	while (ptr)
 	{
-		ptr=ParseActionToken(Token, Item);
+		ParseActionToken(Token, Item);
 		ptr=GetToken(ptr,"\\S",&Token,GETTOKEN_QUOTES);
 	}
 	break;
