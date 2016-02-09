@@ -316,6 +316,23 @@ free(Attribs);
 }	
 
 
+char *RebuildPath(char *RetStr, char *Path, char *CurrDir)
+{
+char *NewPath=NULL, *Token=NULL, *ptr;
+
+NewPath=CopyStr(RetStr,"");
+ptr=GetToken(Path,":",&Token,0);
+while (ptr)
+{
+  if (strcmp(Token,CurrDir) !=0) NewPath=MCatStr(NewPath,Token,":",NULL);
+  ptr=GetToken(ptr,":",&Token,0);
+}
+
+DestroyString(Token);
+return(NewPath);
+}
+
+
 
 void ProcessCmdLine(char *CmdLine, ListNode *Crayons)
 {
@@ -336,22 +353,26 @@ while (Curr)
 }	
 
 
-char *RebuildCommandLine(char *RetStr, int argc, char *argv[])
+char *RebuildCommandLine(char *RetStr, int argc, char *argv[], const char *CrayonizerDir)
 {
-char *CommandLine=NULL, *Quoted=NULL, *ptr;
+char *CommandLine=NULL, *Tempstr=NULL, *ptr;
 int i;
 
 
 ptr=GetVar(Vars, "ReplaceCommand");
 if (StrLen(ptr)) return(CopyStr(RetStr,ptr));
 
-CommandLine=MCopyStr(RetStr, argv[0]," ",GetVar(Vars,"ExtraCmdLineOptions")," ",NULL);
+Tempstr=RebuildPath(Tempstr, getenv("PATH"), CrayonizerDir);
+CommandLine=RetStr;
+CommandLine=FindFileInPath(CommandLine, argv[0], Tempstr);
+CommandLine=MCatStr(CommandLine, " ",GetVar(Vars,"ExtraCmdLineOptions")," ",NULL);
 for (i=1; i < argc; i++)
 {
-	Quoted=QuoteCharsInStr(Quoted,argv[i]," 	()");
-	CommandLine=MCatStr(CommandLine,Quoted," ",NULL);
+	Tempstr=QuoteCharsInStr(Tempstr,argv[i]," 	()");
+	CommandLine=MCatStr(CommandLine,Tempstr," ",NULL);
 }
 
+DestroyString(Tempstr);
 return(CommandLine);
 }
 
@@ -359,7 +380,7 @@ return(CommandLine);
 
 
 
-STREAM *LaunchCommands(int argc, char *argv[], ListNode *Matches)
+STREAM *LaunchCommands(int argc, char *argv[], ListNode *Matches, const char *CrayonizerDir)
 {
 char *Tempstr=NULL;
 ListNode *Curr;
@@ -384,7 +405,7 @@ Curr=ListGetNext(Curr);
 }
 
 
-Tempstr=RebuildCommandLine(Tempstr,argc, argv);
+Tempstr=RebuildCommandLine(Tempstr,argc, argv, CrayonizerDir);
 
 if (GlobalFlags & FLAG_DONTCRAYON)
 {
@@ -404,23 +425,6 @@ DestroyString(Tempstr);
 return(Pipe);
 }
 
-
-
-char *RebuildPath(char *RetStr, char *Path, char *CurrDir)
-{
-char *NewPath=NULL, *Token=NULL, *ptr;
-
-NewPath=CopyStr(RetStr,"");
-ptr=GetToken(Path,":",&Token,0);
-while (ptr)
-{
-  if (strcmp(Token,CurrDir) !=0) NewPath=MCatStr(NewPath,Token,":",NULL);
-  ptr=GetToken(ptr,":",&Token,0);
-}
-
-DestroyString(Token);
-return(NewPath);
-}
 
 
 void LoadEnvironment()
@@ -497,8 +501,6 @@ if (! StrLen(CrayonizerDir))
 		exit(1);
 }
 
-Tempstr=RebuildPath(Tempstr,getenv("PATH"),CrayonizerDir);
-setenv("PATH",Tempstr,TRUE);
 LoadEnvironment();
 
 //if not outputing to a tty then run
@@ -535,7 +537,7 @@ ProcessAppends(NULL, CrayonList, CRAYON_ONSTART);
 ProcessAppends(NULL, CrayonList, CRAYON_PREPEND);
 
 
-CommandPipe=LaunchCommands(argc, argv, CrayonList);
+CommandPipe=LaunchCommands(argc, argv, CrayonList, CrayonizerDir);
 
 
 ListAddItem(Streams,CommandPipe);
