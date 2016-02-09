@@ -510,7 +510,7 @@ DestroyString(Token);
 
 //This parses a 'standard crayonization', which means those things that
 //can occur anywhere in the config, not just at the highest level
-void ParseCrayonization(char *Type, char *Config, ListNode *CrayonList)
+TCrayon *ParseCrayonization(char *Type, char *Config, ListNode *CrayonList)
 {
 	TCrayon *Crayon=NULL, *CLS=NULL, *Action=NULL;
 
@@ -529,7 +529,9 @@ void ParseCrayonization(char *Type, char *Config, ListNode *CrayonList)
 		ListAddNamedItem(CrayonList,CLS->Match,CLS);
 	}
 
+	return(Crayon);
 }
+	
 
 
 
@@ -575,7 +577,7 @@ TCrayon *Crayon=NULL;
 			}
 			//Otherwise it's a 'standard' crayonization that can occur 
 			//in sublists/functions etc
-			else ParseCrayonization(Token, ptr, CrayonList);
+			else Crayon=ParseCrayonization(Token, ptr, CrayonList);
 		}
 	Tempstr=STREAMReadLine(Tempstr,S);
 	}

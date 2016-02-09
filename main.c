@@ -244,7 +244,6 @@ int ColorProgramOutput(STREAM *Pipe, ListNode *CrayonList)
 					continue;
 			}
 
-//fprintf(stderr,"CL: %d [%s]\n",GlobalFlags & FLAG_STRIP_ANSI, Tempstr); fflush(NULL);
 			if (len >0) Crayonize(Pipe, Tempstr,len,CrayonList);
 			if (GlobalFlags & FLAG_CURSOR_HOME)
 			{
@@ -292,6 +291,7 @@ Curr=ListGetNext(Crayons);
 while (Curr)
 {
 	Item=(TCrayon *) Curr->Item;
+
 
 	if (
 			(Item->Type==Type) || 
@@ -503,8 +503,6 @@ if (! StrLen(CrayonizerDir))
 
 LoadEnvironment();
 
-//if not outputing to a tty then run
-//if (! isatty(1)) GlobalFlags |=FLAG_DONTCRAYON;
 if (! ListSize(CrayonList)) GlobalFlags |=FLAG_DONTCRAYON;
 
 
