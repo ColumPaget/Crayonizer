@@ -501,6 +501,16 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 			write(1,Tempstr,StrLen(Tempstr));
 		break;
 
+		case ACTION_XSELECTION: 
+			Tempstr=CopyStr(Tempstr,"\x1b]52;cp;");
+			EnvName=EncodeBytes(EnvName,MatchStart,end-start,ENCODE_BASE64);
+			Tempstr=CatStr(Tempstr,EnvName);
+			StripTrailingWhitespace(Tempstr);
+			Tempstr=CatStr(Tempstr,"\x07");
+			write(1,Tempstr,StrLen(Tempstr));
+		break;
+
+
 		case ACTION_RESTORE_XTITLE:
 			Tempstr=CopyStr(Tempstr,"\x1b]2;");
 			Tempstr=CatStr(Tempstr,GetVar(Vars,"OldXtermTitle"));

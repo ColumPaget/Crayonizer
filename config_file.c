@@ -232,6 +232,7 @@ int val=0;
 	else if (strcasecmp(Token,"basename")==0) *Action=NewCrayonAction(Crayon, ACTION_BASENAME);
 	else if (strcasecmp(Token,"setxtitle")==0) *Action=NewCrayonAction(Crayon, ACTION_SET_XTITLE);
 	else if (strcasecmp(Token,"setxlabel")==0) *Action=NewCrayonAction(Crayon, ACTION_SET_XICONNAME);
+	else if (strcasecmp(Token,"xselection")==0) *Action=NewCrayonAction(Crayon, ACTION_XSELECTION);
 	else if (strcasecmp(Token,"raise")==0) *Action=NewCrayonAction(Crayon, ACTION_XRAISE);
 	else if (strcasecmp(Token,"lower")==0) *Action=NewCrayonAction(Crayon, ACTION_XLOWER);
 	else if (strcasecmp(Token,"iconify")==0) *Action=NewCrayonAction(Crayon, ACTION_ICONIFY);
@@ -337,7 +338,6 @@ int val=0;
 	else if (strcasecmp(Token,"querybar")==0) ptr=ParseStatusBar(ACTION_QUERYBAR, Crayon, ptr);
 	else if (strcasecmp(Token,"selectbar")==0) ptr=ParseStatusBar(ACTION_SELECTBAR, Crayon, ptr);
 	else if (strcasecmp(Token,"call")==0) ptr=ParseStringAction(ptr,ACTION_FUNCCALL,Crayon);
-
 
 DestroyString(Token);
 return(ptr);
@@ -569,6 +569,7 @@ TCrayon *Crayon=NULL;
 				Crayon=KeypressParse(Tempstr);
 			}
 			else if (strcasecmp(Token,"timer")==0) ParseTimer(ptr);
+			else if (strcasecmp(Token,"pty")==0) GlobalFlags |= FLAG_USE_PTY;
 			else if (strcasecmp(Token,"stripansi")==0) GlobalFlags |= FLAG_STRIP_ANSI;
 			else if (strcasecmp(Token,"command")==0) SetVar(Vars,"ReplaceCommand",ptr);
 			else if(strcmp(Token,"{")==0) 
