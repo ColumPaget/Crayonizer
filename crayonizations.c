@@ -4,6 +4,48 @@
 #include "text_substitutions.h"
 
 
+int HandleComparison(char *Op, const char *Compare, const char *CompareTo)
+{
+char *ptr, *optr;
+int result=FALSE;
+
+if (! StrValid(Op)) return(FALSE);
+if (! StrValid(Compare)) return(FALSE);
+if (! StrValid(CompareTo)) return(FALSE);
+optr=Op;
+switch (*optr)
+{
+			case '<':
+				if (*(optr+1) == '=') result=(atof(Compare) <= atof(CompareTo));
+				else result=(atof(Compare) < atof(CompareTo));
+			break;
+
+			case '>':
+				if (*(optr+1) == '=') result=(atof(Compare) >= atof(CompareTo));
+				else result=(atof(Compare) > atof(CompareTo));
+			break;
+
+			case '=':
+				result=pmatch(Compare, CompareTo, StrLen(CompareTo), NULL, 0);
+				if (result > 0) result=TRUE;
+				else result=FALSE;
+			break;
+
+			case '!':
+				result=pmatch(Compare, CompareTo, StrLen(CompareTo), NULL, 0);
+				if (result > 0) result=FALSE;
+				else result=TRUE;
+			break;
+
+			case '%':
+				if (atoi(Compare) % atoi(CompareTo) ==0) result=TRUE;
+			break;
+}
+
+return(result);
+}
+
+
 int IsInStringList(char *Item, char *List, char *Separator) 
 {
 char *Token=NULL, *ptr;
@@ -31,13 +73,13 @@ return(result);
 
 int HandleCrayonIf(TCrayon *Crayon)
 {
-char *Expr=NULL, *Tempstr=NULL, *Token=NULL, *PrevToken=NULL, *ptr, *tptr, *aptr;
+char *Expr=NULL, *Tempstr=NULL, *Token=NULL, *PrevToken=NULL, *Value=NULL, *ptr, *tptr, *aptr;
 int result=FALSE, val, i;
 
 	Expr=SubstituteVarsInString(Expr,Crayon->Match,Vars,0);
 
 
-	ptr=GetToken(Expr,"\\S",&Token,GETTOKEN_QUOTES);
+	ptr=GetToken(Expr,"\\S|\\M",&Token,GETTOKEN_QUOTES|GETTOKEN_MULTI_SEPARATORS|GETTOKEN_INCLUDE_SEPARATORS);
 	while (ptr)
 	{
 		switch (*Token)
@@ -134,50 +176,18 @@ int result=FALSE, val, i;
 				}
 			break;
 
-
 			case '<':
-				if (*(ptr+1) == '=')
-				{
-					ptr=GetToken(ptr,"\\S",&Token,GETTOKEN_QUOTES);
-					result=(atoi(PrevToken) <= atoi(Token));
-				}
-				else
-				{
-				ptr=GetToken(ptr,"\\S",&Token,GETTOKEN_QUOTES);
-				result=(atoi(PrevToken) < atoi(Token));
-				}
-			break;
-
 			case '>':
-				if (*(ptr+1) == '=')
-				{
-					ptr=GetToken(ptr,"\\S",&Token,GETTOKEN_QUOTES);
-					result=(atoi(PrevToken) >= atoi(Token));
-				}
-				else
-				{
-					ptr=GetToken(ptr,"\\S",&Token,GETTOKEN_QUOTES);
-					result=(atoi(PrevToken) > atoi(Token));
-				}
-			break;
-
-
 			case '=':
-				ptr=GetToken(ptr,"\\S",&Token,GETTOKEN_QUOTES);
-				result=pmatch(Token, PrevToken, StrLen(PrevToken), NULL, 0);
-				if (result > 0) result=TRUE;
-				else result=FALSE;
-			break;
-
 			case '!':
-				ptr=GetToken(ptr,"\\S",&Token,GETTOKEN_QUOTES);
-				result=pmatch(Token, PrevToken, StrLen(PrevToken), NULL, 0);
-				if (result > 0) result=FALSE;
-				else result=TRUE;
+			case '%':
+				ptr=GetToken(ptr,"\\S",&Value,GETTOKEN_QUOTES);
+				result=HandleComparison(Token, PrevToken, Value);
 			break;
 		}
+
 		PrevToken=CopyStr(PrevToken,Token);
-		ptr=GetToken(ptr,"\\S",&Token,GETTOKEN_QUOTES);
+		ptr=GetToken(ptr,"\\S|\\M",&Token,GETTOKEN_QUOTES|GETTOKEN_MULTI_SEPARATORS|GETTOKEN_INCLUDE_SEPARATORS);
 	}
 
 
@@ -222,27 +232,7 @@ break;
 
 case CRAYON_COMPARATOR:
 	if (! sptr) return(FALSE);
-	val=atof(sptr);
-//For a 'value' item, it's actions can contain multiple 'value' checks
-	switch (Crayon->Op)
-	{
-	case '<':
-	if (val < Crayon->Value) result=TRUE;
-	break;
-	
-	case '>':
-	if (val > Crayon->Value) result=TRUE;
-	
-	break;
-	
-	case '=':
-	if (val == Crayon->Value) result=TRUE;
-	break;
-	
-	case '!':
-	if (val != Crayon->Value) result=TRUE;
-	break;
-	}
+	result=HandleComparison(Crayon->Op, sptr, Crayon->String);
 break;
 
 case CRAYON_LINENO:
@@ -305,11 +295,10 @@ char *Tempstr=NULL;
 int result, wrote;
 ListNode *Streams;
 
-
 Streams=ListCreate();
 CmdS=STREAMCreate();
 CmdErr=STREAMCreate();
-PipeSpawn( &(CmdS->out_fd), &(CmdS->in_fd), &(CmdErr->in_fd), Program);
+PipeSpawn( &(CmdS->out_fd), &(CmdS->in_fd), &(CmdErr->in_fd), Program, 0, "");
 
 ListAddItem(Streams,Pipe);
 ListAddItem(Streams,CmdS);
@@ -355,12 +344,12 @@ DestroyString(Tempstr);
 
 
 
-void FunctionCall(STREAM *Pipe, char *FuncName, char *Data)
+void FunctionCall(STREAM *Pipe, char *FuncName, char *Data, int DataLen)
 {
 ListNode *Curr, *Node;
 
 Curr=ListFindNamedItem(Functions, FuncName);
-if (Curr) Crayonize(Pipe, NULL, 0, (ListNode *) Curr->Item);
+if (Curr) Crayonize(Pipe, Data, DataLen, TRUE, (ListNode *) Curr->Item);
 }
 
 
@@ -368,7 +357,7 @@ void ApplySingleAction(STREAM *Pipe, int *AttribLine, char *Line, int Len, char 
 {
 int Attribs;
 int start, end, i;
-char *Tempstr=NULL, *EnvName=NULL, *ptr;
+char *Tempstr=NULL, *EnvName=NULL, *Value=NULL, *ptr;
 TCrayon *StatusBar=NULL;
 
 if (GlobalFlags & FLAG_DONTCRAYON) return;
@@ -401,6 +390,7 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 		break;
 
 		case ACTION_SETENV:
+		case ACTION_SETSTR:
 			ptr=strchr(Action->String,'=');
 			if (ptr) 
 			{
@@ -415,8 +405,10 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 				Tempstr=CopyStrLen(Tempstr,MatchStart,(end-start)+1);
 			}
 			StripTrailingWhitespace(Tempstr);
-			setenv(EnvName,Tempstr,TRUE);
-			SetVar(Vars,EnvName,Tempstr);
+
+			Value=SubstituteTextValues(Value, Tempstr, StrLen(Tempstr));
+			setenv(EnvName,Value,TRUE);
+			SetVar(Vars,EnvName,Value);
 		break;
 
 		case ACTION_ARGS:
@@ -426,7 +418,7 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 
 		case ACTION_PLAYSOUND:
 			Tempstr=SubstituteVarsInString(Tempstr,Action->String,Vars,0);
-			SoundPlayFile("/dev/dsp",Action->String,VOLUME_LEAVEALONE, PLAYSOUND_NONBLOCK);
+			SoundPlayFile("/dev/dsp",Tempstr,VOLUME_LEAVEALONE, PLAYSOUND_NONBLOCK);
 		break;
 
 		case ACTION_EXEC:
@@ -442,7 +434,8 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 		case ACTION_SEND:
 			Tempstr=SubstituteVarsInString(Tempstr,Action->String,Vars,0);
 			STREAMWriteLine(Tempstr,Pipe); STREAMFlush(Pipe);
-			usleep(250000);
+			usleep(25000);
+			fprintf(stderr,"SEND '%s'\n",Tempstr);
 		break;
 
 		case ACTION_ECHO:
@@ -489,6 +482,11 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 		case ACTION_SET_XTITLE: 
 			EnvName=SubstituteTextValues(EnvName, MatchStart, end-start);
 			StripTrailingWhitespace(EnvName);
+			if (! StrValid(EnvName))
+			{
+			ptr=GetVar(Vars,"crayon_default_xtitle");
+			if (StrValid(ptr)) EnvName=SubstituteTextValues(EnvName, ptr, StrLen(ptr));
+			}
 			Tempstr=MCopyStr(Tempstr,"\x1b]2;",EnvName,"\x07", NULL);
 			write(1,Tempstr,StrLen(Tempstr));
 		break;
@@ -512,10 +510,9 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 
 
 		case ACTION_RESTORE_XTITLE:
-			Tempstr=CopyStr(Tempstr,"\x1b]2;");
-			Tempstr=CatStr(Tempstr,GetVar(Vars,"OldXtermTitle"));
-			StripTrailingWhitespace(Tempstr);
-			Tempstr=CatStr(Tempstr,"\x07");
+			ptr=GetVar(Vars,"crayon_old_xtitle");
+			if (! StrValid(ptr)) ptr=GetVar(Vars,"crayon_default_xtitle");
+			Tempstr=MCopyStr(Tempstr,"\x1b]2;", ptr, "\x07", NULL);
 			write(1,Tempstr,StrLen(Tempstr));
 		break;
 
@@ -579,7 +576,7 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 		break;
 
 		case ACTION_FUNCCALL:
-			FunctionCall(Pipe, Action->String, Line);
+			FunctionCall(Pipe, Action->String, Line, Len);
 		break;
 
 	case ACTION_INFOBAR:
@@ -627,6 +624,7 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 
 	DestroyString(Tempstr);
 	DestroyString(EnvName);
+	DestroyString(Value);
 }
 
 
@@ -791,8 +789,10 @@ int result;
 ListNode *Matches, *Curr;
 TPMatch *Match;
 
+
 	Matches=ListCreate();
 	result=pmatch(Crayon->Match, Line, Len, Matches, PMATCH_SUBSTR);
+
 	if (result > 0)
 	{
 		Curr=ListGetNext(Matches);
@@ -912,13 +912,17 @@ return(result);
 }
 
 
-void Crayonize(STREAM *Pipe, char *Line, int Len, ListNode *CrayonList)
+void Crayonize(STREAM *Pipe, char *Line, int Len, int IsFuncCall, ListNode *CrayonList)
 {
 int *Attribs=NULL;
 ListNode *Curr;
 
-
-if (Len > 0) Attribs=(int *) calloc(Len,sizeof(int));
+if (LineNo < 0) LineNo=0;
+if (Len > 0) 
+{
+	Attribs=(int *) calloc(Len,sizeof(int));
+	if (IsFuncCall) Attribs[0] |= FLAG_HIDE;
+}
 Curr=ListGetNext(CrayonList);
 while (Curr)
 {
@@ -926,6 +930,11 @@ while (Curr)
 	Curr=ListGetNext(Curr);
 }
 OutputLineWithAttributes(Line, Attribs, Len);
+if (GlobalFlags & FLAG_CURSOR_HOME)
+{
+	GlobalFlags &= ~FLAG_CURSOR_HOME;
+	LineNo=-1;
+}
 if (Attribs) free(Attribs);
 }
 

@@ -21,250 +21,104 @@
 #include "config_file.h"
 #include "keypress.h"
 #include "signals.h"
+#include "escape_sequences.h"
+#include "crayonizations.h"
+#include "config_file.h"
+#include "status_bar.h"
+#include "timers.h"
 #include "help.h"
+#include <wait.h>
 
 #define NORM "\x1b[0m"
 #define CLRSCR "\x1b[2J\x1b[;H"
-#define CTRLO 15
 
 char *Version="1.0";
 int GlobalFlags=0;
-time_t StartTime=0;
 
 
-//This handles ANSI sequences that start ESC[, these are 'Control Sequence Introducer' (CSI) codes 
-//Some of these we need to detect, becuase the clear the screen or such
-char *HandleCSI(char *ptr, char *end)
-{
-int val, AtEnd=FALSE;
-
-	//special case, some xterm commands
-	if (*ptr=='?')
-	{
-		ptr++;
-		if (strncmp(ptr, "47h", 3)==0)
-		{
-			GlobalFlags |= FLAG_ALTERNATE_SCREEN;
-			return(ptr+3);
-		}
-		else if (strncmp(ptr, "47l", 3)==0)
-		{
-			GlobalFlags &= ~FLAG_ALTERNATE_SCREEN;
-			GlobalFlags |= FLAG_REDRAW;
-			return(ptr+3);
-		}
-		else if (strncmp(ptr, "1049h", 5)==0)
-		{
-			GlobalFlags |= FLAG_ALTERNATE_SCREEN;
-			return(ptr+5);
-		}
-		else if (strncmp(ptr, "1049l", 5)==0)
-		{
-			GlobalFlags &= ~FLAG_ALTERNATE_SCREEN;
-			GlobalFlags |= FLAG_REDRAW;
-			return(ptr+5);
-		}
-		else if (strncmp(ptr, "1047h", 5)==0)
-		{
-			GlobalFlags |= FLAG_ALTERNATE_SCREEN;
-			return(ptr+5);
-		}
-		else if (strncmp(ptr, "1047l", 5)==0)
-		{
-			GlobalFlags &= ~FLAG_ALTERNATE_SCREEN;
-			GlobalFlags |= FLAG_REDRAW;
-			return(ptr+5);
-		}
-	}
-
-	while (ptr && (ptr < end))
-	{
-	switch (*ptr)
-	{
-		case 'H':
-		GlobalFlags |= FLAG_CURSOR_HOME | FLAG_REDRAW;
-		AtEnd=TRUE;
-		break;
-
-		case 'J':
-		if (val=='0') GlobalFlags |= FLAG_REDRAW; //^[0J Clear from cursor to end of screen
-		if (val=='1') GlobalFlags |= FLAG_REDRAW; //^[1J Clear from cursor to start of screen
-		if (val=='2') GlobalFlags |= FLAG_CURSOR_HOME | FLAG_REDRAW; //^[2J Clear whole Screen 
-		AtEnd=TRUE;
-		break;
-
-		case '0':
-		case '1':
-		case '2':
-		case '3':
-		case '4':
-		case '5':
-		case '6':
-		case '7':
-		case '8':
-		case '9':
-		val=*ptr;
-		break;
-
-		case ';':
-		break;
-
-		default:
-		AtEnd=TRUE;
-		break;
-	}
-
-	ptr++;
-	if (*ptr==';') AtEnd=FALSE;
-	if (AtEnd) break;
-	}
-
-return(ptr);
-}
-
-
-//Handle ANSI coming from the crayonized program 
-char *HandleANSI(char *text, char *end)
-{
-char *ptr;
-
-ptr=text;
-if ((GlobalFlags & FLAG_STRIP_ANSI) && (*ptr==CTRLO)) return(ptr+1);
-
-while (*ptr=='\x1b') 
-{
-ptr++;
-if (*ptr=='[') ptr=HandleCSI(ptr+1, end);
-else 
-{
-	while (ptr < end)
-	{
-		if (
-					(isalpha(*ptr) || (*ptr=='@'))
-					&&
-					(*(ptr+1) != ';') 
-				) break;
-			ptr++;
-	}
-	
-	//ESC[<val>@ means 'make room for characters to be inserted'
-	if (*ptr=='@') return(text);
-	if (*ptr=='H') return(text);
-	if (ptr!=end) ptr++;
-}
-}
-
-if (GlobalFlags & FLAG_STRIP_ANSI) return(ptr);
-return(text);
-}
 
 
 int ColorProgramOutput(STREAM *Pipe, ListNode *CrayonList)
 {
 	static char *Buffer=NULL;
 	static int BuffFill=0;
-	char *Tempstr=NULL, *ptr, *ansi_start, *line_start, *end;
+	char *line_start, *start, *end, *ptr;
 	int result, len=0;
 	
 
 	if (! Buffer) Buffer=(char *) calloc(1,4097);
-	Tempstr=(char *) calloc(1,4097);
 	result=STREAMReadBytes(Pipe,Buffer+BuffFill,4096-BuffFill);
 
 	//Although we only read 'result' bytes, we already had 'BuffFill' bytes carried over
 	//from last time (we were halfway through an ascii sequence, and expect to have the
 	//rest of it in this read)
 	result+=BuffFill;
-
-	//Clear out the 'BuffFill' variable, we don't want it to hold it's value
-	//for the next call of this function
+	//if we fail to consume all the string, we will reset BuffFill, so here we zero it
 	BuffFill=0;
 
+	if (result < 1) return(STREAM_CLOSED);
+
 	Buffer[result]='\0';
-
-	if (result > 0)
+	line_start=Buffer;
+	end=Buffer+result;
+	ptr=line_start;
+	while (ptr < end)
 	{
-		ptr=Buffer;
-		end=Buffer+result;
-		while (ptr < end)
+		start=ptr;
+		if ((*ptr == '\x1b') || (*ptr == CTRLO))
 		{
-			line_start=ptr;
-			while (ptr < end) 
-			{
-				if ((*ptr=='\x1b')  || (*ptr==CTRLO))
+				switch (EscapeSequenceHandle(&ptr,end))
 				{
+					case ES_STRIP:
+						len=end-ptr;
+						memmove(start,ptr,len);
+						end=start+len;
+						ptr=start;
+					break;
 
-					ansi_start=ptr;
-					ptr=HandleANSI(ptr,end);
-
-					//if ptr != ansi_start then strip ansi is active
-					if (ptr != ansi_start) continue;
-
-			/*
-					if (GlobalFlags & FLAG_CURSOR_HOME)
-					{
-						//Flush what we have
-						if (len >0) Crayonize(Pipe, Tempstr,len,CrayonList);
-						//result=(ptr-ansi_start) +1;
-						//write(1,ansi_start,result);
-						len=0;
-						GlobalFlags &= ~FLAG_CURSOR_HOME;
-						LineNo=-1;
-						break;
-					}
-		*/
-				
-					if (ptr==end) 
-					{
+					case ES_PART:
 						//We have part of an ANSI sequence, with a bit missing
 						//So save this in 'buffer' and recall
-						BuffFill=end-ansi_start;
-						memmove(Buffer,ansi_start,BuffFill);
-						break;
-					}
+						BuffFill=end-start;
+						memmove(Buffer,start,BuffFill);
+						return(BuffFill);
+					break;
 
-					//if we stripped something in HandleANSI, then consider the new piece of text
-					if (ptr != ansi_start) continue;
+					case ES_OKAY:
+  				if (ptr==end) Crayonize(Pipe, line_start,end-line_start,FALSE,CrayonList);
+					break;
 				}
-
-
-				//if we got through all the above, then we add the character to the
-				//Line. If the character is a \n, then we break out of the inner loop
-				Tempstr[len]=*ptr;
-				len++;
-				if (*ptr == '\n') break;
-
-				ptr++; 
-			}
-
-			if ((ptr==end) && (*ptr != '\n') && (GlobalFlags & FLAG_EXPECT_LINES))
-			{
-					BuffFill=ptr-line_start;
-					memmove(Buffer,line_start,BuffFill);
-					continue;
-			}
-
-			if (len >0) Crayonize(Pipe, Tempstr,len,CrayonList);
-			if (GlobalFlags & FLAG_CURSOR_HOME)
-			{
-						GlobalFlags &= ~FLAG_CURSOR_HOME;
-						LineNo=-1;
-			}
-			LineNo++;
-			ptr++;
-			len=0;
 		}
+		else //deal with normal text rather than escape sequence
+		{
+			while ((ptr < end) && (*ptr !='\n') && (*ptr != '\x1b') && (*ptr !=CTRLO)) ptr++;
+			if (*ptr=='\n') 
+			{
+				ptr++;
+				Crayonize(Pipe, line_start,ptr-line_start,FALSE,CrayonList);
+				LineNo++;
+				line_start=ptr;
+			}
+      else if (ptr==end)  
+      {
+				if (GlobalFlags & FLAG_EXPECT_LINES)
+				{
+          BuffFill=ptr-start;
+          memmove(Buffer,start,BuffFill);
+					return(BuffFill);
+				}
+				else Crayonize(Pipe, line_start,end-line_start,FALSE,CrayonList);
+      }
+		}
+	}
 
-		//By now, whatever happens, we'll have drawn our line, so if we need to 
-		//refresh status bars because we cleared the screen, then we do so here
+	//By now, whatever happens, we'll have drawn our line, so if we need to 
+	//refresh status bars because we cleared the screen, then we do so here
 		if (GlobalFlags & FLAG_REDRAW)
 		{
 			UpdateStatusBars(TRUE);
 			GlobalFlags &= ~FLAG_REDRAW;	
 		}
-	}
-
-	DestroyString(Tempstr);
 
 	//Don't do this, is static
 	//DestroyString(Buffer);
@@ -285,7 +139,7 @@ if (Type==CRAYON_ONSTART) GlobalFlags |= FLAG_DOING_PREPENDS;
 if (Type==CRAYON_APPEND) GlobalFlags |= FLAG_DOING_APPENDS;
 if (Type==CRAYON_ONEXIT) GlobalFlags |= FLAG_DOING_APPENDS;
 
-if (GlobalFlags & HAS_STATUSBAR) SetupStatusBars();
+//if (GlobalFlags & HAS_STATUSBAR) SetupStatusBars();
 
 Curr=ListGetNext(Crayons);
 while (Curr)
@@ -368,9 +222,11 @@ CommandLine=FindFileInPath(CommandLine, argv[0], Tempstr);
 CommandLine=MCatStr(CommandLine, " ",GetVar(Vars,"ExtraCmdLineOptions")," ",NULL);
 for (i=1; i < argc; i++)
 {
-	Tempstr=QuoteCharsInStr(Tempstr,argv[i]," 	()");
-	CommandLine=MCatStr(CommandLine,Tempstr," ",NULL);
+	//Tempstr=QuoteCharsInStr(Tempstr,argv[i]," 	()");
+	//CommandLine=MCatStr(CommandLine,Tempstr," ",NULL);
+	CommandLine=MCatStr(CommandLine,"'",argv[i],"' ",NULL);
 }
+StripTrailingWhitespace(CommandLine);
 
 DestroyString(Tempstr);
 return(CommandLine);
@@ -384,7 +240,7 @@ STREAM *LaunchCommands(int argc, char *argv[], ListNode *Matches, const char *Cr
 {
 char *Tempstr=NULL;
 ListNode *Curr;
-STREAM *Pipe;
+STREAM *Pipe=NULL;
 TCrayon *Crayon;
 int i;
 
@@ -404,16 +260,25 @@ if (Crayon->Type==CRAYON_EXEC)
 Curr=ListGetNext(Curr);
 }
 
+//if child crayonizations are not allowed (only one crayonizer in this
+//session) then set the CRAYONIZER environment variable so sub-processes
+//know not to run crayonizer
+if (! (GlobalFlags & FLAG_CHILDCRAYON)) 
+{
+	Tempstr=FormatStr(Tempstr, "%d", getpid());
+	setenv("CRAYONIZER", Tempstr, TRUE);
+}
 
 Tempstr=RebuildCommandLine(Tempstr,argc, argv, CrayonizerDir);
 
 if (GlobalFlags & FLAG_DONTCRAYON)
 {
 	//Exit after running the command
+	if (isatty(0)) ResetTTY(0);
 	exit(system(Tempstr));
 }
 
-Pipe=STREAMSpawnCommand(Tempstr,COMMS_BY_PTY|SPAWN_TRUST_COMMAND|TTYFLAG_ECHO|TTYFLAG_CANON|TTYFLAG_CRLF|COMMS_COMBINE_STDERR);
+Pipe=STREAMSpawnCommand(Tempstr,COMMS_BY_PTY|SPAWN_TRUST_COMMAND|TTYFLAG_ECHO|TTYFLAG_CANON|TTYFLAG_CRLF|COMMS_COMBINE_STDERR,"");
 signal(SIGTERM, HandleSignal);
 signal(SIGINT, HandleSignal);
 signal(SIGWINCH, HandleSignal);
@@ -487,7 +352,11 @@ char *Tempstr=NULL, *CrayonizerDir=NULL, *CmdLine=NULL;
 int val, i, result;
 
 CrayonList=ListCreate();
-for (i=0; i < argc; i++) CmdLine=MCatStr(CmdLine,argv[i]," ",NULL);
+for (i=0; i < argc; i++) 
+{
+	if (strchr(argv[i],' ')) CmdLine=MCatStr(CmdLine,"'",argv[i],"' ",NULL);
+	else CmdLine=MCatStr(CmdLine,argv[i]," ",NULL);
+}
 StripTrailingWhitespace(CmdLine);
 
 ConfigLoad(CmdLine, &CrayonizerDir, CrayonList);
@@ -505,17 +374,9 @@ LoadEnvironment();
 
 if (! ListSize(CrayonList)) GlobalFlags |=FLAG_DONTCRAYON;
 
-
-//Okay, we're committed to running the command!
-Streams=ListCreate();
-
-
-
-
-//if (KeypressFlags & KEYPRESS_PASSINPUT)
 if (isatty(0))
 {
-	InitTTY(0, 0,TTYFLAG_LFCR|TTYFLAG_IGNSIG);
+	if (! (GlobalFlags & FLAG_DONTCRAYON)) InitTTY(0, 0,TTYFLAG_LFCR|TTYFLAG_IGNSIG);
 	StdIn=STREAMFromFD(0);
 	STREAMSetTimeout(StdIn,10);
 	ListAddItem(Streams,StdIn);
@@ -536,14 +397,13 @@ ProcessAppends(NULL, CrayonList, CRAYON_PREPEND);
 
 
 CommandPipe=LaunchCommands(argc, argv, CrayonList, CrayonizerDir);
-
-
 ListAddItem(Streams,CommandPipe);
-CrayonizerProcessInputs();
+
+CrayonizerProcessInputs(Streams);
 wait(&val);
 
-Tempstr=FormatStr(Tempstr,"%d",time(NULL) - StartTime);
-SetVar(Vars,"duration",Tempstr);
+SetDurationVariable();
+
 ProcessAppends(CommandPipe,CrayonList,CRAYON_APPEND);
 ProcessAppends(CommandPipe,CrayonList,CRAYON_ONEXIT);
 
@@ -573,7 +433,7 @@ StdIn=STREAMFromFD(0);
 Tempstr=STREAMReadLine(Tempstr,StdIn);
 while (Tempstr)
 {
-Crayonize(StdIn, Tempstr,StrLen(Tempstr),CrayonList);
+Crayonize(StdIn, Tempstr,StrLen(Tempstr),FALSE,CrayonList);
 LineNo++;
 Tempstr=STREAMReadLine(Tempstr,StdIn);
 }
@@ -590,7 +450,7 @@ DestroyString(Tempstr);
 void CalledAsSelf(int argc, char *argv[])
 {
 const char *Args[]={"-v","-version","--version","-?","-h","-help","--help","-config-help","-pmatch-help","-stdin",NULL};
-typedef enum {ARG_V1, ARG_V2, ARG_V3, ARG_H1, ARG_H2, ARG_H3, ARG_H4, ARG_CONFIG_HELP, ARG_PMATCH_HELP, ARG_STDIN};
+typedef enum {ARG_V1, ARG_V2, ARG_V3, ARG_H1, ARG_H2, ARG_H3, ARG_H4, ARG_CONFIG_HELP, ARG_PMATCH_HELP, ARG_STDIN} TCmdArgs;
 int i, val, new_argc=0;
 char **new_argv=NULL;
 
@@ -646,13 +506,15 @@ char *Tempstr=NULL, *ptr;
 int val;
 
 //if we are going to restore the title at the end, then we need to set it here
-/*
 if (GlobalFlags & FLAG_RESTORE_XTITLE) 
 {
 	Tempstr=XTermReadValue(Tempstr, "\x1b[21;t", "\x1b]l");
-  if (StrLen(Tempstr)) SetVar(Vars,"OldXtermTitle",Tempstr);
+  if (StrLen(Tempstr)) SetVar(Vars,"crayon_old_xtitle",Tempstr);
 }
-*/
+
+ptr=getenv("CRAYONIZER");
+if (ptr && (atoi(ptr) > 0)) GlobalFlags |= FLAG_DONTCRAYON;
+
 
 Tempstr=CopyStr(Tempstr,getenv("TERM"));
 if (StrLen(Tempstr)) SetVar(Vars,"TERM",Tempstr);
@@ -749,13 +611,6 @@ if (StrLen(Tempstr))
 			}
 }
 
-
-/*
-printf("TERM: %s\n",GetVar(Vars,"TERM"));
-printf("BGC:: %s\n",GetVar(Vars,"BACKCOLOR"));
-printf("BGTT: %s\n",GetVar(Vars,"BACKTONE"));
-*/
-
 DestroyString(Tempstr);
 }
 
@@ -768,10 +623,12 @@ char *ptr;
 cmdline_argc=argc;
 cmdline_argv=argv;
 
+Streams=ListCreate();
 Vars=ListCreate();
+
 time(&StartTime);
 CrayonizerGetEnvironment();
-GlobalFlags=FLAG_FOCUSED;
+GlobalFlags |= FLAG_FOCUSED;
 
 if (strcmp(basename(argv[0]),"crayonizer")==0) CalledAsSelf(argc, argv);
 else 

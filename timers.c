@@ -1,13 +1,23 @@
 #include "timers.h"
+#include "config_file.h"
 
 ListNode *Timers=NULL;
+time_t StartTime=0;
 
-
+void SetDurationVariable()
+{
+char *Tempstr=NULL;
+Tempstr=FormatStr(Tempstr,"%d",time(NULL) - StartTime);
+SetVar(Vars,"crayon_duration",Tempstr);
+setenv("crayon_duration",Tempstr,TRUE);
+DestroyString(Tempstr);
+}
 
 void UpdateTimer(TCrayon *Timer)
 {
 char *ptr=NULL;
 
+SetDurationVariable();
 Timer->Value=(float) Now;
 Timer->Value+=strtof(Timer->Match,&ptr);
 if (ptr)

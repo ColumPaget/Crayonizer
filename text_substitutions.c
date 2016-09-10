@@ -1,7 +1,7 @@
 #include "text_substitutions.h"
 #include <sys/mman.h>
 #include <sys/statvfs.h>
-
+#include <wait.h>
 
 #define SYS_STAT_PATH "/proc/stat"
 #define MEMINFO_PATH "/proc/meminfo"
@@ -140,7 +140,7 @@ int len=0;
 		ptr=GetNameValuePair(CrayonizerMMap, "\n","=",&Name, RetVal);
 		while (ptr)
 		{
-		if (StrLen(Name) && (strcmp(ValName, Name)==0)) len=StrLen(*RetVal);
+		if (StrValid(Name) && (strcmp(ValName, Name)==0)) len=StrLen(*RetVal);
 		ptr=GetNameValuePair(ptr, "\n","=",&Name, RetVal);
 		}
 
@@ -322,7 +322,7 @@ for (ptr=Text; *ptr != '\0'; ptr++)
 	switch (Type)
 	{
 		case ENVTYPE_SCRIPT:
-		S=STREAMSpawnCommand(Name, COMMS_BY_PIPE | SPAWN_TRUST_COMMAND);
+		S=STREAMSpawnCommand(Name, COMMS_BY_PIPE | SPAWN_TRUST_COMMAND,"");
 		if (S)
 		{
 		Tempstr=STREAMReadLine(Tempstr, S);
@@ -349,7 +349,8 @@ for (ptr=Text; *ptr != '\0'; ptr++)
 		break;
 
 		default:
-		tptr=getenv(Name);
+		tptr=GetVar(Vars, Name);
+		if (! tptr) tptr=getenv(Name);
 		break;
 	}
 

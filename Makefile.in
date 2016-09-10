@@ -10,11 +10,11 @@ FLAGS=$(CFLAGS) @DEFS@
 
 
 
-OBJ=common.o config_file.o help.o crayonizations.o text_substitutions.o status_bar.o xterm.o keypress.o signals.o timers.o
+OBJ=common.o config_file.o help.o crayonizations.o text_substitutions.o status_bar.o escape_sequences.o xterm.o keypress.o signals.o timers.o
 
 all: $(OBJ) main.c common.h
-	@cd libUseful-2.3; $(MAKE)
-	$(CC) $(FLAGS) -o crayonizer main.c $(LIBS) $(OBJ) libUseful-2.3/libUseful-2.3.a 
+	@cd libUseful-2.6; $(MAKE)
+	$(CC) $(FLAGS) -o crayonizer main.c $(LIBS) $(OBJ) libUseful-2.6/libUseful-2.6.a 
 
 config_file.o: config_file.c config_file.h common.h
 	gcc -c config_file.c
@@ -40,6 +40,9 @@ signals.o: signals.c signals.h common.h
 text_substitutions.o: text_substitutions.c text_substitutions.h common.h
 	gcc -c text_substitutions.c
 
+escape_sequences.o: escape_sequences.c escape_sequences.h common.h
+	gcc -c escape_sequences.c
+
 status_bar.o: status_bar.c status_bar.h common.h
 	gcc -c status_bar.c
 
@@ -48,7 +51,8 @@ timers.o: timers.c timers.h common.h
 
 
 clean:
-	@rm -f crayonizer *.o libUseful-2.3/*.o libUseful-2.3/*.a libUseful-2.3/*.so
+	@rm -f crayonizer *.o libUseful-2.6/*.o libUseful-2.6/*.a libUseful-2.6/*.so config.log config.status
+	@rm -rf autom4te.cache 
 
 install:
 	$(INSTALL) -d $(DESTDIR)$(bindir)

@@ -1,5 +1,7 @@
 #include "keypress.h"
 #include "status_bar.h"
+#include "config_file.h"
+#include "crayonizations.h"
 
 TCrayon *KeyPresses=NULL;
 int NoOfKeyPresses=0;
@@ -61,7 +63,7 @@ case '2':
 	case '4': snprintf(KeySym,MaxLen,"%s%s",ModName,"F12"); break;
 	case '5': snprintf(KeySym,MaxLen,"%s%s",ModName,"F13"); break;
 	case '6': snprintf(KeySym,MaxLen,"%s%s",ModName,"F14"); break;
-	case '8': snprintf(KeySym,MaxLen,"%s%s",ModName,"win"); break;
+	case '8': snprintf(KeySym,MaxLen,"%s%s",ModName,"F15"); break;
 	case '9': snprintf(KeySym,MaxLen,"%s%s",ModName,"menu"); break;
 	}
 break;
@@ -142,6 +144,25 @@ switch (inchar)
 	case '^':
 		//ctrl
 		ParseModifiedKey(KeySym, MaxLen, "ctrl-", Digit);
+	break;
+
+	//'fake shift' sequences, I think
+	case ';':
+		Num=SetStrLen(Num,2);
+		result=STREAMReadBytes(StdIn, Num,2);
+		if (result==2)
+		{
+		if (strcmp(Num,"2A")==0) strcpy(KeySym,"shift-up");
+		else if (strcmp(Num,"2B")==0) strcpy(KeySym,"shift-down");
+		else if (strcmp(Num,"2C")==0) strcpy(KeySym,"shift-right");
+		else if (strcmp(Num,"2D")==0) strcpy(KeySym,"shift-left");
+		else if (strcmp(Num,"5A")==0) strcpy(KeySym,"ctrl-up");
+		else if (strcmp(Num,"5B")==0) strcpy(KeySym,"ctrl-down");
+		else if (strcmp(Num,"5C")==0) strcpy(KeySym,"ctrl-right");
+		else if (strcmp(Num,"5D")==0) strcpy(KeySym,"ctrl-left");
+		}
+	break;
+
 	break;
 
 	case '0':
@@ -330,6 +351,7 @@ if (result > 0)
 	}
 }
 
+if (! StrValid(*KeySym)) *KeySym=CopyStr(*KeySym, *Data);
 
 return(result);
 }
@@ -365,7 +387,6 @@ int MaxLen=20;
 bytes_read=KeyPressRead(StdIn, &Tempstr, &KeySym, MaxLen);
 if (bytes_read > 0)
 {
-
 		if (FindKeypressAction(Out, KeySym)) bytes_read=0;
     else if (StatusBarHandleInput(Out, Tempstr, KeySym)) bytes_read=0;
 		else

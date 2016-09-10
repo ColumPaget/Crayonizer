@@ -52,15 +52,16 @@ StdIn=STREAMFromFD(0);
 STREAMSetTimeout(StdIn,1);
 write(1,Query,StrLen(Query));
 Tempstr=STREAMReadToTerminator(Tempstr,StdIn,'\\');
-if (StrLen(Tempstr))
+len=StrLen(Tempstr);
+if (len > 0)
 {
-	ptr=Tempstr+StrLen(Tempstr)-2;
+	ptr=Tempstr+len-2;
 	if (strcmp(ptr,"\x1b\\")==0) *ptr='\0';
 
 	ptr=Tempstr;
 	len=StrLen(ReplyStart);
 	if (strncmp(ptr,ReplyStart,len)==0) ptr+=len;
-	if (StrLen(ptr)) RetStr=CopyStr(RetStr,ptr);
+	if (StrValid(ptr)) RetStr=CopyStr(RetStr,ptr);
 }
 
 STREAMDisassociateFromFD(StdIn);

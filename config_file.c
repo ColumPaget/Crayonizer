@@ -6,63 +6,38 @@
 const char *Colors[]={"none","black","red","green","yellow","blue","magenta","cyan","white","none","none","darkgrey","lightred","lightgreen","lightyellow","lightblue","lightmagenta","lightcyan","lightgrey",NULL};
 const char *CrayonTypes[]={"action","args","line","string","section","lineno","value","mapto","linemapto","append","prepend","onstart","onexit","cmdline","passinput","include","keypress","if","statusbar","timer","edit",NULL};
 
-
-char *ParseAttribs(char *Verbs, TCrayon *Crayon, TCrayon **Action);
-
-
-void MMapSetup()
-{
-char *FName=NULL, *Tempstr=NULL;
-struct stat Stat;
-int MMapSize=4096, result;
-STREAM *S;
-
-if (! CrayonizerMMap)
-{
-
-FName=MCopyStr(FName, GetCurrUserHomeDir(), "/.crayonizer.mmap", NULL);
-
-result=stat(FName, &Stat);
-if ((result==-1) || (Stat.st_size < MMapSize))
-{
-S=STREAMOpenFile(FName, SF_WRONLY | SF_CREAT);
-if (S)
-{
-Tempstr=SetStrLen(Tempstr, MMapSize);
-memset(Tempstr, 0, MMapSize);
-STREAMWriteBytes(S, Tempstr, MMapSize);
-STREAMClose(S);
-}
-
-}
-
-
-S=STREAMOpenFile(FName, SF_RDWR | SF_MMAP);
-if (S) CrayonizerMMap=STREAMGetItem(S, "MMap");
-}
-
-//Don't close!
-//STREAMClose(S);
-DestroyString(Tempstr);
-DestroyString(FName);
-}
-
-
 //only used by 'IsAttrib'
 #define FLAG_COLOR 1
 
 
-int IsFlag(const char *String)
+
+char *ParseAttribs(char *Verbs, TCrayon *Crayon, TCrayon **Action);
+
+
+
+//colors can be either a color name or a forecolor/backcolor pair
+int ParseColor(const char *ColorString)
 {
-const char *AttribStrings[]={"top","bottom","persist","transient","refresh",NULL};
-int AttribFlags[]={FLAG_TOP, FLAG_BOTTOM, FLAG_PERSIST, FLAG_TRANSIENT, FLAG_REFRESH};
-int val;
+const char *ptr;
+int val=0, Attrib=0;
+char *Token=NULL;
 
-val=MatchTokenFromList(String,AttribStrings,0);
-if (val > -1) return(AttribFlags[val]);
+	ptr=strchr(ColorString,'/');
+	if (ptr)
+	{
+		Token=CopyStrLen(Token,ColorString,ptr-ColorString);
+		val=MatchTokenFromList(ptr+1,Colors,0);
+		if (val > 0) Attrib=val << 8;
+	}
+	else Token=CopyStr(Token, ColorString);
 
-return(0);
+	val=MatchTokenFromList(Token,Colors,0);
+	if (val > -1) Attrib |= val;
+
+	DestroyString(Token);
+return(Attrib);
 }
+
 
 
 int IsAttrib(const char *String)
@@ -79,33 +54,39 @@ return(ParseColor(String));
 
 
 
+
+int IsFlag(const char *String)
+{
+const char *AttribStrings[]={"top","bottom","persist","transient","refresh",NULL};
+int AttribFlags[]={FLAG_TOP, FLAG_BOTTOM, FLAG_PERSIST, FLAG_TRANSIENT, FLAG_REFRESH};
+int val;
+
+val=MatchTokenFromList(String,AttribStrings,0);
+if (val > -1) return(AttribFlags[val]);
+
+return(0);
+}
+
+
+int MatchActionType(const char *Str)
+{
+const char *ActStrings[]={"", "args", "echo", "replace","setstr","setenv","send","bell","playsound","exec","passto","passinput","basename","setxtitle","restorextitle","setxlabel","xselection","setxiconname","raise","lower","iconify","deiconify","maximize","demaximize","wide","high","font","fontup","fontdown","cls","clearscreen","cleartoeol","altscreen","normscreen","xtermbgcolor","xtermfgcolor","rxvtbgcolor","rxvtfgcolor","bgcolor","fgcolor","dontcrayon","allowchildcrayon","redraw","infobar","querybar","selectbar","call",NULL};
+
+return(MatchTokenFromList(Str,ActStrings,0));
+}
+
+
+
+
 int CrayonType(char *String)
 {
 int val;
 
+	if (! StrValid(String)) return(-1);
+	if (*String=='#') return(-1);
 	val=MatchTokenFromList(String,CrayonTypes,0);
 	if (val==-1) val=0;
 	return(val);
-}
-
-
-int ParseColor(char *ColorString)
-{
-char *ptr;
-int val=0, Attrib=0;
-
-	ptr=strchr(ColorString,'/');
-	if (ptr)
-	{
-		*ptr='\0';
-		val=MatchTokenFromList(ptr+1,Colors,0);
-		if (val > 0) Attrib=val << 8;
-		else *ptr='/';
-	}
-	val=MatchTokenFromList(ColorString,Colors,0);
-	if (val > -1) Attrib |= val;
-
-return(Attrib);
 }
 
 
@@ -171,6 +152,45 @@ return(ptr);
 
 
 
+void MMapSetup()
+{
+char *FName=NULL, *Tempstr=NULL;
+struct stat Stat;
+int MMapSize=4096, result;
+STREAM *S;
+
+if (! CrayonizerMMap)
+{
+
+FName=MCopyStr(FName, GetCurrUserHomeDir(), "/.crayonizer.mmap", NULL);
+
+result=stat(FName, &Stat);
+if ((result==-1) || (Stat.st_size < MMapSize))
+{
+S=STREAMOpenFile(FName, SF_WRONLY | SF_CREAT);
+if (S)
+{
+Tempstr=SetStrLen(Tempstr, MMapSize);
+memset(Tempstr, 0, MMapSize);
+STREAMWriteBytes(S, Tempstr, MMapSize);
+STREAMClose(S);
+}
+
+}
+
+
+S=STREAMOpenFile(FName, SF_RDWR | SF_MMAP);
+if (S) CrayonizerMMap=STREAMGetItem(S, "MMap");
+}
+
+//Don't close!
+//STREAMClose(S);
+DestroyString(Tempstr);
+DestroyString(FName);
+}
+
+
+
 char *ParseStatusBar(int Type, TCrayon *Crayon, char *Config)
 {
 char *Token=NULL, *ptr;
@@ -228,116 +248,54 @@ int val=0;
 	//Is Attrib actually returns attribs, so if it's >0 we can use it to set
 	//attribs
 	if (val) (*Action)->Attribs |= val;
-	else if (strcasecmp(Token,"clrtoeol")==0) (*Action)->Attribs |= FLAG_CLR2EOL;
-	else if (strcasecmp(Token,"basename")==0) *Action=NewCrayonAction(Crayon, ACTION_BASENAME);
-	else if (strcasecmp(Token,"setxtitle")==0) *Action=NewCrayonAction(Crayon, ACTION_SET_XTITLE);
-	else if (strcasecmp(Token,"setxlabel")==0) *Action=NewCrayonAction(Crayon, ACTION_SET_XICONNAME);
-	else if (strcasecmp(Token,"xselection")==0) *Action=NewCrayonAction(Crayon, ACTION_XSELECTION);
-	else if (strcasecmp(Token,"raise")==0) *Action=NewCrayonAction(Crayon, ACTION_XRAISE);
-	else if (strcasecmp(Token,"lower")==0) *Action=NewCrayonAction(Crayon, ACTION_XLOWER);
-	else if (strcasecmp(Token,"iconify")==0) *Action=NewCrayonAction(Crayon, ACTION_ICONIFY);
-	else if (strcasecmp(Token,"deiconify")==0) *Action=NewCrayonAction(Crayon, ACTION_DEICONIFY);
-	else if (strcasecmp(Token,"maximize")==0) *Action=NewCrayonAction(Crayon, ACTION_MAXIMIZE);
-	else if (strcasecmp(Token,"demaximize")==0) *Action=NewCrayonAction(Crayon, ACTION_DEMAXIMIZE);
-	else if (strcasecmp(Token,"wide")==0) *Action=NewCrayonAction(Crayon, ACTION_WIDE);
-	else if (strcasecmp(Token,"high")==0) *Action=NewCrayonAction(Crayon, ACTION_HIGH);
-	else if (strcasecmp(Token,"font")==0) ptr=ParseStringAction(ptr,ACTION_FONT,Crayon);
-	else if (strcasecmp(Token,"fontup")==0) *Action=NewCrayonAction(Crayon, ACTION_FONT_UP);
-	else if (strcasecmp(Token,"fontdown")==0) *Action=NewCrayonAction(Crayon, ACTION_FONT_DOWN);
-	else if (strcasecmp(Token,"cls")==0) *Action=NewCrayonAction(Crayon, ACTION_CLEARSCREEN);
-	else if (strcasecmp(Token,"clearscreen")==0) *Action=NewCrayonAction(Crayon, ACTION_CLEARSCREEN);
-
-	else if (strcasecmp(Token,"restorextitle")==0) 
+	else
 	{
+	val=MatchActionType(Token);
+	switch (val)
+	{
+		case ACTION_CLRTOEOL: (*Action)->Attribs |= FLAG_CLR2EOL; break;
+		case ACTION_RESTORE_XTITLE: 
 		*Action=NewCrayonAction(Crayon, ACTION_RESTORE_XTITLE);
 		GlobalFlags |= FLAG_RESTORE_XTITLE;
-	}
-	else if (strcasecmp(Token,"replace")==0) 
-	{
-		ptr=ParseStringAction(ptr,ACTION_REPLACE,Crayon);
-	}
-	else if (strcasecmp(Token,"setstr")==0) 
-	{
-		ptr=ParseStringAction(ptr,ACTION_SETENV,Crayon);
-	}
-	else if (strcasecmp(Token,"setenv")==0) 
-	{
-		ptr=ParseStringAction(ptr,ACTION_SETENV,Crayon);
-	}
-	else if (strcasecmp(Token,"send")==0) 
-	{
-		ptr=ParseStringAction(ptr,ACTION_SEND,Crayon);
-	}
-	else if (strcasecmp(Token,"bell")==0) 
-	{
-		ptr=ParseStringAction(ptr,ACTION_BELL,Crayon);
-	}
-	else if (strcasecmp(Token,"playsound")==0) 
-	{
-		ptr=ParseStringAction(ptr,ACTION_PLAYSOUND,Crayon);
-	}
-	else if (strcasecmp(Token,"exec")==0) 
-	{
-		ptr=ParseStringAction(ptr,ACTION_EXEC,Crayon);
-	}
-	else if (strcasecmp(Token,"passto")==0) 
-	{
-		ptr=ParseStringAction(ptr,ACTION_PASSTO,Crayon);
-	}
-	else if (strcasecmp(Token,"echo")==0) 
-	{
-		ptr=ParseStringAction(ptr,ACTION_ECHO,Crayon);
-	}
-	else if (strcasecmp(Token,"altscreen")==0) 
-	{
-		*Action=NewCrayonAction(Crayon, ACTION_ALTSCREEN);
-	}
-	else if (strcasecmp(Token,"normscreen")==0) 
-	{
-		*Action=NewCrayonAction(Crayon, ACTION_NORMSCREEN);
-	}
-	else if (strcasecmp(Token,"xtermbgcolor")==0) 
-	{
-		ptr=ParseStringAction(ptr,ACTION_XTERM_BGCOLOR,Crayon);
-	}
-	else if (strcasecmp(Token,"xtermfgcolor")==0) 
-	{
-		ptr=ParseStringAction(ptr,ACTION_XTERM_FGCOLOR,Crayon);
-	}
-	else if (strcasecmp(Token,"rxvtbgcolor")==0) 
-	{
-		ptr=ParseStringAction(ptr,ACTION_RXVT_BGCOLOR,Crayon);
-	}
-	else if (strcasecmp(Token,"rxvtfgcolor")==0) 
-	{
-		ptr=ParseStringAction(ptr,ACTION_RXVT_FGCOLOR,Crayon);
-	}
-	else if (strcasecmp(Token,"bgcolor")==0) 
-	{
+		break;
+
+		case ACTION_REPLACE:
+		case ACTION_SETSTR:
+		case ACTION_SETENV:
+		case ACTION_SEND:
+		case ACTION_PLAYSOUND:
+		case ACTION_EXEC:
+		case ACTION_PASSTO:
+		case ACTION_ECHO:
+		case ACTION_FONT:
+		case ACTION_ARGS:
+		case ACTION_FUNCCALL:
+		case ACTION_XTERM_BGCOLOR:
+		case ACTION_XTERM_FGCOLOR:
+		case ACTION_RXVT_BGCOLOR:
+		case ACTION_RXVT_FGCOLOR:
+			ptr=ParseStringAction(ptr,val,Crayon);
+		break;
+
+		case ACTION_BGCOLOR:
 		if (strcmp(getenv("TERM"),"rxvt")==0) ptr=ParseStringAction(ptr,ACTION_RXVT_BGCOLOR,Crayon);
 		else ptr=ParseStringAction(ptr,ACTION_XTERM_BGCOLOR,Crayon);
-	}
-	else if (strcasecmp(Token,"fgcolor")==0) 
-	{
+		break;
+
+		case ACTION_FGCOLOR:
 		if (strcmp(getenv("TERM"),"rxvt")==0) ptr=ParseStringAction(ptr,ACTION_RXVT_FGCOLOR,Crayon);
 		else ptr=ParseStringAction(ptr,ACTION_XTERM_FGCOLOR,Crayon);
+		break;
+
+	case ACTION_INFOBAR:
+	case ACTION_QUERYBAR:
+	case ACTION_SELECTBAR:
+		ptr=ParseStatusBar(val, Crayon, ptr);
+	break;
+
+	default: (*Action)=NewCrayonAction(Crayon, val); break;
 	}
-	else if (strcasecmp(Token,"args")==0) 
-	{
-		ptr=ParseStringAction(ptr,ACTION_ARGS,Crayon);
 	}
-	else if (strcasecmp(Token,"edit")==0) 
-	{
-		ptr=ParseStringAction(ptr,ACTION_EDIT,Crayon);
-	}
-	else if (strcasecmp(Token,"dontcrayon")==0) 
-	{
-		*Action=NewCrayonAction(Crayon, ACTION_DONTCRAYON);
-	}
-	else if (strcasecmp(Token,"infobar")==0) ptr=ParseStatusBar(ACTION_INFOBAR, Crayon, ptr);
-	else if (strcasecmp(Token,"querybar")==0) ptr=ParseStatusBar(ACTION_QUERYBAR, Crayon, ptr);
-	else if (strcasecmp(Token,"selectbar")==0) ptr=ParseStatusBar(ACTION_SELECTBAR, Crayon, ptr);
-	else if (strcasecmp(Token,"call")==0) ptr=ParseStringAction(ptr,ACTION_FUNCCALL,Crayon);
 
 DestroyString(Token);
 return(ptr);
@@ -367,9 +325,10 @@ while (StrLen(ptr))
 			case '!':
 			case '<':
 			case '>':
-				if (Action->Op != '\0') Action=NewCrayonAction(Crayon,0);
-				Action->Op=*Token;
+				if (StrValid(Action->Op)) Action=NewCrayonAction(Crayon,0);
+				Action->Op=CopyStrLen(Action->Op, Token, 1);
 				Action->Value=atof(Token+1);
+				Action->String=CopyStr(Action->String, Token+1);
 				Action->Type=CRAYON_COMPARATOR;
 			break;
 
@@ -413,7 +372,7 @@ switch (Item->Type)
 	break;
 
 	case CRAYON_SECTION:
-		Item->Start=strtol(Item->Match,&ptr2,30);
+		Item->Start=strtol(Item->Match,&ptr2,10);
 		ptr2++;
 		Item->Len=strtol(ptr2,NULL,10) - Item->Start;
 
@@ -431,6 +390,14 @@ switch (Item->Type)
 		ptr=GetToken(ptr,"\\S",&Token,GETTOKEN_QUOTES);
 	}
 	break;
+
+	default:
+		if (MatchActionType(Token) >0) 
+		{
+			Item->Type=CRAYON_ACTION;
+			ParseCrayonAction(Item, Args);
+		}
+	break;
 }
 
 DestroyString(Token);
@@ -447,8 +414,8 @@ void ParseCrayonEntry(TCrayon *Crayon, char *Token, char *Args)
 	TCrayon *CLS;
 
 	Type=CrayonType(Token);
-		
-	if (Type > 0)
+	
+	if (Type > -1)
 	{
 	Crayon->Type=Type;
 	switch (Type)
@@ -458,12 +425,20 @@ void ParseCrayonEntry(TCrayon *Crayon, char *Token, char *Args)
 	break;
 	
 	case CRAYON_ACTION:
-		ParseCrayonAction(Crayon, ptr);
+		ParseCrayonAction(Crayon, Args);
 	break;
 
 	default:
+		if (MatchActionType(Token) >0) 
+		{
+			Crayon->Type=CRAYON_ACTION;
+			ParseCrayonAction(Crayon, Args);
+		}
+		else
+		{
 		ptr=GetToken(Args,"\\S",&Crayon->Match,GETTOKEN_QUOTES);
 		ParseCrayonAction(Crayon, ptr);
+		}
 	break;
 	}
 	}
@@ -510,7 +485,7 @@ DestroyString(Token);
 
 //This parses a 'standard crayonization', which means those things that
 //can occur anywhere in the config, not just at the highest level
-TCrayon *ParseCrayonization(char *Type, char *Config, ListNode *CrayonList)
+TCrayon *ParseCrayonization(const char *Type, const char *Config, ListNode *CrayonList)
 {
 	TCrayon *Crayon=NULL, *CLS=NULL, *Action=NULL;
 
@@ -554,6 +529,7 @@ TCrayon *Crayon=NULL;
 			if (strcasecmp(Token,"passinput")==0) KeypressFlags |=  KEYPRESS_PASSINPUT;
 			else if (strcasecmp(Token,"lineedit")==0) KeypressFlags |= KEYPRESS_LINEDIT;
 			else if (strcasecmp(Token,"expectlines")==0) GlobalFlags |= FLAG_EXPECT_LINES;
+			else if (strcasecmp(Token,"allowchildcrayon")==0) GlobalFlags |= FLAG_CHILDCRAYON;
 			else if (strcasecmp(Token,"keypress")==0) Crayon=KeypressParse(ptr);
 			else if (strcasecmp(Token,"selection")==0) StatusBarParseSelection(S, ptr);
 			//these commands are effectively keypress without 'keypress' so pass
@@ -571,6 +547,7 @@ TCrayon *Crayon=NULL;
 			else if (strcasecmp(Token,"timer")==0) ParseTimer(ptr);
 			else if (strcasecmp(Token,"pty")==0) GlobalFlags |= FLAG_USE_PTY;
 			else if (strcasecmp(Token,"stripansi")==0) GlobalFlags |= FLAG_STRIP_ANSI;
+			else if (strcasecmp(Token,"stripxtitle")==0) GlobalFlags |= FLAG_STRIP_XTITLE;
 			else if (strcasecmp(Token,"command")==0) SetVar(Vars,"ReplaceCommand",ptr);
 			else if(strcmp(Token,"{")==0) 
 			{
@@ -580,6 +557,7 @@ TCrayon *Crayon=NULL;
 			//in sublists/functions etc
 			else Crayon=ParseCrayonization(Token, ptr, CrayonList);
 		}
+
 	Tempstr=STREAMReadLine(Tempstr,S);
 	}
 
@@ -644,7 +622,11 @@ while (Tempstr)
 	ptr=GetToken(Tempstr, "\\S", &Token, GETTOKEN_QUOTES);
 	if (strcmp(Token,"}")==0) break;
 	
-	ParseCrayonization(Token, ptr, Select);
+	if (MatchActionType(Token) > -1)
+	{
+		 ParseCrayonization("action", Tempstr, Select);
+	}
+	else ParseCrayonization(Token, ptr, Select);
 	Tempstr=STREAMReadLine(Tempstr, S);
 }
 
@@ -665,7 +647,7 @@ char *ProgName=NULL, *Args;
 S=STREAMOpenFile(Path,SF_RDONLY);
 if (! S) return(FALSE);
 
-Args=GetToken(CommandLine," ",&ProgName,0);
+Args=GetToken(CommandLine," ",&ProgName,GETTOKEN_QUOTES);
 Tempstr=STREAMReadLine(Tempstr,S);
 while (Tempstr)
 {
@@ -673,6 +655,7 @@ while (Tempstr)
 	StripLeadingWhitespace(Tempstr);
 	ptr=GetToken(Tempstr,"\\S",&Token,0);
 	if (strcasecmp(Token,"CrayonizerDir")==0) *CrayonizerDir=CopyStr(*CrayonizerDir,ptr);
+	else if (strcasecmp(Token,"allowchildcrayon")==0) GlobalFlags |= FLAG_CHILDCRAYON;
 	else if (strcasecmp(Token,"entry")==0)
 	{
 		ptr=GetToken(ptr,"\\S",&Token,0);
@@ -709,12 +692,12 @@ int i;
 
 Vars=ListCreate();
 SetVar(Vars,"SystemConfigDir","/etc");
-SetVar(Vars,"SystemCrayonizerDir","/etc/crayonizer");
+SetVar(Vars,"SystemCrayonizerDir","/etc/crayonizer.d");
 GetToken(CmdLine," ",&Tempstr,0);
 SetVar(Vars,"Command",Tempstr);
 UserDir=CopyStr(UserDir,GetCurrUserHomeDir());
 SetVar(Vars,"UserDir",UserDir);
-Tempstr=MCopyStr(Tempstr,UserDir,"/.crayonizer",NULL);
+Tempstr=MCopyStr(Tempstr,UserDir,"/.crayonizer.d",NULL);
 SetVar(Vars,"UserCrayonizerDir",Tempstr);
 
 

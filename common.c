@@ -7,6 +7,6 @@ int cmdline_argc;
 char **cmdline_argv;
 char *CrayonizerMMap=NULL;
 STREAM *StdIn=NULL, *CommandPipe=NULL;
-ListNode *CrayonList=NULL, *Streams=NULL, *Functions=NULL;
+ListNode *CrayonList=NULL, *Functions=NULL, *Streams=NULL;
 time_t Now=0;
 

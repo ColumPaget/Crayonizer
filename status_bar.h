@@ -30,10 +30,12 @@ int EditLen;
 int EditCursor;
 int RefreshInterval;
 time_t NextRefresh;
+char *FuncName;
 ListNode *Items;
 ListNode *Curr;
 TCrayon *Action;
 } TStatusBar;
+
 
 TCrayon *StatusBarGetActive();
 void StatusBarCloseActive();
@@ -45,6 +47,6 @@ int SelectionBar(TCrayon *Setup);
 //TStatusBar *StatusBarCreate(int Type, int Attribs, const char *Text);
 void StatusBarDestroy(TStatusBar *);
 //TStatusBar *ParseStatusBar(const char *Data);
-int SetupStatusBars();
+int SetupStatusBars(TStatusBar *Top, TStatusBar *Bottom);
 void UpdateStatusBars(int ForceUpdate);
 #endif
