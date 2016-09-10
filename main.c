@@ -26,6 +26,7 @@
 #include "config_file.h"
 #include "status_bar.h"
 #include "timers.h"
+#include "xterm.h"
 #include "help.h"
 #include <wait.h>
 
