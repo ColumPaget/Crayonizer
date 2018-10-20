@@ -1,4 +1,5 @@
 #include "config_file.h"
+#include "command_line.h"
 #include "keypress.h"
 #include "status_bar.h"
 #include "timers.h"
@@ -11,12 +12,12 @@ const char *CrayonTypes[]={"action","args","line","string","section","lineno","v
 
 
 
-char *ParseAttribs(char *Verbs, TCrayon *Crayon, TCrayon **Action);
+static const char *ParseAttribs(const char *Verbs, TCrayon *Crayon, TCrayon **Action);
 
 
 
 //colors can be either a color name or a forecolor/backcolor pair
-int ParseColor(const char *ColorString)
+static int ParseColor(const char *ColorString)
 {
 const char *ptr;
 int val=0, Attrib=0;
@@ -34,13 +35,13 @@ char *Token=NULL;
 	val=MatchTokenFromList(Token,Colors,0);
 	if (val > -1) Attrib |= val;
 
-	DestroyString(Token);
+	Destroy(Token);
 return(Attrib);
 }
 
 
 
-int IsAttrib(const char *String)
+static int IsAttrib(const char *String)
 {
 const char *AttribStrings[]={"caps","bold","hide","blink","uppercase","underline","lowercase","inverse",NULL};
 int AttribFlags[]={FLAG_CAPS, FLAG_BOLD, FLAG_HIDE, FLAG_BLINK, FLAG_CAPS, FLAG_UNDER, FLAG_LOWERCASE, FLAG_INVERSE};
@@ -55,7 +56,7 @@ return(ParseColor(String));
 
 
 
-int IsFlag(const char *String)
+static int IsFlag(const char *String)
 {
 const char *AttribStrings[]={"top","bottom","persist","transient","refresh",NULL};
 int AttribFlags[]={FLAG_TOP, FLAG_BOTTOM, FLAG_PERSIST, FLAG_TRANSIENT, FLAG_REFRESH};
@@ -68,23 +69,23 @@ return(0);
 }
 
 
-int MatchActionType(const char *Str)
+static int MatchActionType(const char *Str)
 {
-const char *ActStrings[]={"", "args", "echo", "replace","setstr","setenv","send","bell","playsound","exec","passto","passinput","basename","setxtitle","restorextitle","setxlabel","xselection","setxiconname","raise","lower","iconify","deiconify","maximize","demaximize","wide","high","font","fontup","fontdown","cls","clearscreen","cleartoeol","altscreen","normscreen","xtermbgcolor","xtermfgcolor","rxvtbgcolor","rxvtfgcolor","bgcolor","fgcolor","dontcrayon","allowchildcrayon","redraw","infobar","querybar","selectbar","call",NULL};
+const char *ActStrings[]={"", "args", "echo", "replace","setstr","setenv","send","bell","playsound","exec","passto","passinput","basename","setxtitle","restorextitle","setxlabel","xselection","setxiconname","raise","lower","iconify","deiconify","maximize","demaximize","wide","high","font","fontup","fontdown","cls","clearscreen","cleartoeol","altscreen","normscreen","xtermbgcolor","xtermfgcolor","rxvtbgcolor","rxvtfgcolor","bgcolor","fgcolor","dontcrayon","allowchildcrayon","redraw","infobar","querybar","selectbar","historybar","call",NULL};
 
-return(MatchTokenFromList(Str,ActStrings,0));
+return(MatchTokenFromList(Str, ActStrings, 0));
 }
 
 
 
 
-int CrayonType(char *String)
+static int CrayonType(const char *String)
 {
 int val;
 
 	if (! StrValid(String)) return(-1);
 	if (*String=='#') return(-1);
-	val=MatchTokenFromList(String,CrayonTypes,0);
+	val=MatchTokenFromList(String, CrayonTypes, 0);
 	if (val==-1) val=0;
 	return(val);
 }
@@ -112,10 +113,11 @@ return(Act);
 
 
 //This parses those actions that take a string
-char *ParseStringAction(char *Line, int Type, TCrayon *Crayon)
+static const char *ParseStringAction(const char *Line, int Type, TCrayon *Crayon)
 {
 	TCrayon *Action;
-	char *Token=NULL, *ptr, *sptr;
+	char *Token=NULL;
+	const char *ptr, *sptr;
 
 		ptr=GetToken(Line," ",&Token,GETTOKEN_QUOTES);
 
@@ -145,14 +147,14 @@ char *ParseStringAction(char *Line, int Type, TCrayon *Crayon)
 		}
 
 
-		DestroyString(Token);
+		Destroy(Token);
 
 return(ptr);
 }
 
 
 
-void MMapSetup()
+static void MMapSetup()
 {
 char *FName=NULL, *Tempstr=NULL;
 struct stat Stat;
@@ -167,7 +169,7 @@ FName=MCopyStr(FName, GetCurrUserHomeDir(), "/.crayonizer.mmap", NULL);
 result=stat(FName, &Stat);
 if ((result==-1) || (Stat.st_size < MMapSize))
 {
-S=STREAMOpenFile(FName, SF_WRONLY | SF_CREAT);
+S=STREAMOpen(FName, "w");
 if (S)
 {
 Tempstr=SetStrLen(Tempstr, MMapSize);
@@ -179,21 +181,22 @@ STREAMClose(S);
 }
 
 
-S=STREAMOpenFile(FName, SF_RDWR | SF_MMAP);
+S=STREAMOpen(FName, "r+M");
 if (S) CrayonizerMMap=STREAMGetItem(S, "MMap");
 }
 
 //Don't close!
 //STREAMClose(S);
-DestroyString(Tempstr);
-DestroyString(FName);
+Destroy(Tempstr);
+Destroy(FName);
 }
 
 
 
-char *ParseStatusBar(int Type, TCrayon *Crayon, char *Config)
+static const char *ParseStatusBar(int Type, TCrayon *Crayon, const char *Config)
 {
-char *Token=NULL, *ptr;
+char *Token=NULL;
+const char *ptr;
 TCrayon *StatusBar, *Action;
 int val;
 
@@ -229,16 +232,17 @@ int val;
 		Action=NewCrayonAction(StatusBar, ACTION_NONE);
 		ptr=ParseAttribs(ptr, StatusBar, &Action);
 
-		DestroyString(Token);
+		Destroy(Token);
 
 		return(ptr);
 }
 
 
 
-char *ParseAttribs(char *Verbs, TCrayon *Crayon, TCrayon **Action)
+static const char *ParseAttribs(const char *Verbs, TCrayon *Crayon, TCrayon **Action)
 {
-char *Token=NULL, *ptr;
+char *Token=NULL;
+const char *ptr;
 int val=0;
  
 //Do this before anything else!
@@ -290,6 +294,7 @@ int val=0;
 	case ACTION_INFOBAR:
 	case ACTION_QUERYBAR:
 	case ACTION_SELECTBAR:
+	case ACTION_HISTORYBAR:
 		ptr=ParseStatusBar(val, Crayon, ptr);
 	break;
 
@@ -297,7 +302,7 @@ int val=0;
 	}
 	}
 
-DestroyString(Token);
+Destroy(Token);
 return(ptr);
 }
 
@@ -305,9 +310,11 @@ return(ptr);
 
 // Token will either be a test (with an operation like '<' '=' etc) or a list of
 // actions (colors, uppercase) to apply
-char *ParseActionToken(char *Operations, TCrayon *Crayon)
+// this is used elsewhere, so not static
+const char *ParseActionToken(const char *Operations, TCrayon *Crayon)
 {
-char *Token=NULL, *ptr, *nptr;
+char *Token=NULL;
+const char *ptr, *nptr;
 TCrayon *Action=NULL;
 int val=0;
  
@@ -339,7 +346,7 @@ while (StrLen(ptr))
 	ptr=nptr;
 }
 
-DestroyString(Token);
+Destroy(Token);
 
 return(ptr);
 }
@@ -348,9 +355,10 @@ return(ptr);
 
 
 
-char *ParseCrayonAction(TCrayon *Item, char *Args)
+const char *ParseCrayonAction(TCrayon *Item, const char *Args)
 {
-char *Token=NULL, *ptr, *ptr2;
+char *Token=NULL;
+const char *ptr, *ptr2;
 
 
 switch (Item->Type)
@@ -400,16 +408,17 @@ switch (Item->Type)
 	break;
 }
 
-DestroyString(Token);
+Destroy(Token);
 
 return(ptr);
 }
 
 
 
-void ParseCrayonEntry(TCrayon *Crayon, char *Token, char *Args)
+//not static, is used outside of this module
+void ParseCrayonEntry(TCrayon *Crayon, const char *Token, const char *Args)
 {
-	char *ptr;
+	const char *ptr;
 	int Type=0;
 	TCrayon *CLS;
 
@@ -447,9 +456,10 @@ void ParseCrayonEntry(TCrayon *Crayon, char *Token, char *Args)
 
 
 
-void ParseCrayonList(STREAM *S, TCrayon *Crayon)
+static void ParseCrayonList(STREAM *S, TCrayon *Crayon)
 {
-char *Tempstr=NULL, *Token=NULL, *ptr;
+char *Tempstr=NULL, *Token=NULL;
+const char *ptr;
 ListNode *Curr;
 TCrayon *SubItem;
 
@@ -477,15 +487,15 @@ TCrayon *SubItem;
 	Tempstr=STREAMReadLine(Tempstr,S);
 	}
 
-DestroyString(Tempstr);
-DestroyString(Token);
+Destroy(Tempstr);
+Destroy(Token);
 }
 
 
 
 //This parses a 'standard crayonization', which means those things that
 //can occur anywhere in the config, not just at the highest level
-TCrayon *ParseCrayonization(const char *Type, const char *Config, ListNode *CrayonList)
+static TCrayon *ParseCrayonization(const char *Type, const char *Config, ListNode *CrayonList)
 {
 	TCrayon *Crayon=NULL, *CLS=NULL, *Action=NULL;
 
@@ -510,9 +520,10 @@ TCrayon *ParseCrayonization(const char *Type, const char *Config, ListNode *Cray
 
 
 
-void ConfigReadEntry(STREAM *S, ListNode *CrayonList)
+static void ConfigReadEntry(STREAM *S, ListNode *CrayonList)
 {
-char *Tempstr=NULL, *Token=NULL, *ptr;
+char *Tempstr=NULL, *Token=NULL, *Token2=NULL;
+const char *ptr;
 TCrayon *Crayon=NULL;
 
 	Tempstr=STREAMReadLine(Tempstr,S);
@@ -549,6 +560,12 @@ TCrayon *Crayon=NULL;
 			else if (strcasecmp(Token,"stripansi")==0) GlobalFlags |= FLAG_STRIP_ANSI;
 			else if (strcasecmp(Token,"stripxtitle")==0) GlobalFlags |= FLAG_STRIP_XTITLE;
 			else if (strcasecmp(Token,"command")==0) SetVar(Vars,"ReplaceCommand",ptr);
+			else if (strcasecmp(Token,"cmdline-sub")==0) 
+			{
+				ptr=GetToken(ptr, "\\S", &Token, GETTOKEN_QUOTES);
+				ptr=GetToken(ptr, "\\S", &Token2, GETTOKEN_QUOTES);
+				CommandLineAddSubstitution(Token, Token2);
+			}
 			else if(strcmp(Token,"{")==0) 
 			{
 				if (Crayon) ParseCrayonList(S,Crayon);
@@ -561,15 +578,17 @@ TCrayon *Crayon=NULL;
 	Tempstr=STREAMReadLine(Tempstr,S);
 	}
 
-DestroyString(Tempstr);
-DestroyString(Token);
+Destroy(Tempstr);
+Destroy(Token2);
+Destroy(Token);
 
 }
 
 
-int EntryMatchesCommand(char *EntryList, char *EntryArgs, char *ProgPath, char *ProgArgs)
+static int EntryMatchesCommand(char *EntryList, const char *EntryArgs, const char *ProgPath, const char *ProgArgs)
 {
-char *Entry=NULL, *ptr, *p_ProgName;
+char *Entry=NULL;
+const char *ptr, *p_ProgName;
 int result=FALSE;
 
 p_ProgName=strrchr(ProgPath,'/');
@@ -595,7 +614,7 @@ while (ptr)
 	ptr=GetToken(ptr,"|",&Entry,0);
 }
 
-DestroyString(Entry);
+Destroy(Entry);
 return(result);
 }
 
@@ -603,7 +622,8 @@ return(result);
 
 void ParseFunction(STREAM *S, const char *Config)
 {
-char *Token=NULL, *Tempstr=NULL, *ptr;
+char *Token=NULL, *Tempstr=NULL;
+const char *ptr;
 ListNode *Select;
 TCrayon *Crayon;
 
@@ -630,8 +650,8 @@ while (Tempstr)
 	Tempstr=STREAMReadLine(Tempstr, S);
 }
 
-DestroyString(Tempstr);
-DestroyString(Token);
+Destroy(Tempstr);
+Destroy(Token);
 }
 
 
@@ -640,11 +660,11 @@ DestroyString(Token);
 int ConfigReadFile(const char *Path, const char *CommandLine, char **CrayonizerDir, ListNode *CrayonList)
 {
 STREAM *S;
-char *Tempstr=NULL, *Token=NULL, *ptr;
-char *ProgName=NULL, *Args;
+char *Tempstr=NULL, *Token=NULL;
+char *ProgName=NULL;
+const char *ptr, *Args;
 
-
-S=STREAMOpenFile(Path,SF_RDONLY);
+S=STREAMOpen(Path, "r");
 if (! S) return(FALSE);
 
 Args=GetToken(CommandLine," ",&ProgName,GETTOKEN_QUOTES);
@@ -659,7 +679,7 @@ while (Tempstr)
 	else if (strcasecmp(Token,"entry")==0)
 	{
 		ptr=GetToken(ptr,"\\S",&Token,0);
-		if (EntryMatchesCommand(Token,ptr,ProgName, Args))
+		if (EntryMatchesCommand(Token, ptr, ProgName, Args))
 		{
 			ConfigReadEntry(S, CrayonList);
 		}
@@ -672,21 +692,20 @@ while (Tempstr)
 	Tempstr=STREAMReadLine(Tempstr,S);
 }
 
-DestroyString(ProgName);
-DestroyString(Tempstr);
-DestroyString(Token);
+Destroy(ProgName);
+Destroy(Tempstr);
+Destroy(Token);
 
 return(TRUE);
 }
 
 
-int ConfigLoad(const char *CmdLine, char **CrayonizerDir, ListNode *CrayonList)
+int ConfigLoad(const char *CmdLine, const char *ConfigPaths, char **CrayonizerDir, ListNode *CrayonList)
 {
-char *Paths[]={"$(UserCrayonizerDir)/$(Command).conf","$(UserDir)/.crayonizer.conf","$(SystemCrayonizerDir)/$(Command).conf","$(SystemConfigDir)/crayonizer.conf",NULL};
 int RetVal=FALSE;
-
-char *Tempstr=NULL, *UserDir=NULL;
+char *Tempstr=NULL, *UserDir=NULL, *Token=NULL;
 ListNode *Vars;
+const char *ptr;
 int i;
 
 
@@ -701,25 +720,25 @@ Tempstr=MCopyStr(Tempstr,UserDir,"/.crayonizer.d",NULL);
 SetVar(Vars,"UserCrayonizerDir",Tempstr);
 
 
-for (i=0; Paths[i] !=NULL; i++)
+ptr=GetToken(ConfigPaths, ",", &Token, GETTOKEN_QUOTES);
+while (ptr)
 {
-	Tempstr=SubstituteVarsInString(Tempstr,Paths[i],Vars,0);
+	Tempstr=SubstituteVarsInString(Tempstr,Token,Vars,0);
 	if (ConfigReadFile(Tempstr, CmdLine, CrayonizerDir, CrayonList))
 	{
 		RetVal=TRUE;
 		break;
 	}
+ptr=GetToken(ptr, ",", &Token, GETTOKEN_QUOTES);
 }
 
 
-if (! RetVal)
-{
-	printf("ERROR! Crayonizer can't find config file.\n");
-	exit(1);
-}
+if (! RetVal) fprintf(stderr, "ERROR! Crayonizer can't find config file in '%s'.\n", ConfigPaths);
 
-DestroyString(Tempstr);
-DestroyString(UserDir);
+Destroy(Tempstr);
+Destroy(UserDir);
+Destroy(Token);
+
 return(RetVal);
 }
 

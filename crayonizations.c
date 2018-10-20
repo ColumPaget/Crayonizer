@@ -1,10 +1,12 @@
 #include "xterm.h"
 #include "status_bar.h"
+#include "history.h"
 #include "crayonizations.h"
 #include "text_substitutions.h"
 
+static void OutputLineWithAttributes(const char *Line, int *Attribs, int Len);
 
-int HandleComparison(char *Op, const char *Compare, const char *CompareTo)
+static int HandleComparison(char *Op, const char *Compare, const char *CompareTo)
 {
 char *ptr, *optr;
 int result=FALSE;
@@ -46,9 +48,10 @@ return(result);
 }
 
 
-int IsInStringList(char *Item, char *List, char *Separator) 
+static int IsInStringList(char *Item, char *List, char *Separator) 
 {
-char *Token=NULL, *ptr;
+char *Token=NULL;
+const char *ptr;
 int result=FALSE;
 
 ptr=GetToken(List,Separator,&Token,GETTOKEN_QUOTES);
@@ -64,16 +67,17 @@ while (ptr)
 ptr=GetToken(ptr,Separator,&Token,GETTOKEN_QUOTES);
 }
 
-DestroyString(Token);
+Destroy(Token);
 
 return(result);
 }
 
 
 
-int HandleCrayonIf(TCrayon *Crayon)
+static int HandleCrayonIf(TCrayon *Crayon)
 {
-char *Expr=NULL, *Tempstr=NULL, *Token=NULL, *PrevToken=NULL, *Value=NULL, *ptr, *tptr, *aptr;
+char *Expr=NULL, *Tempstr=NULL, *Token=NULL, *PrevToken=NULL, *Value=NULL;
+const char *ptr, *tptr, *aptr;
 int result=FALSE, val, i;
 
 	Expr=SubstituteVarsInString(Expr,Crayon->Match,Vars,0);
@@ -89,8 +93,7 @@ int result=FALSE, val, i;
 				if (strncmp(Token,"arg(",4)==0)
 				{
 					Tempstr=CopyStr(Tempstr,Token+4);
-					tptr=strrchr(Tempstr,')');
-					if (tptr) *tptr='\0';
+					StrRTruncChar(Tempstr, ')');
 					val=StrLen(Tempstr);
 					for (i=1; i < cmdline_argc; i++)
 					{
@@ -118,8 +121,7 @@ int result=FALSE, val, i;
 				if (strncmp(Token,"larg(",5)==0)
 				{
 					Tempstr=CopyStr(Tempstr,Token+5);
-					tptr=strrchr(Tempstr,')');
-					if (tptr) *tptr='\0';
+					StrRTruncChar(Tempstr, ')');
 					for (i=1; i < cmdline_argc; i++)
 					{
 						tptr=cmdline_argv[i];
@@ -138,8 +140,7 @@ int result=FALSE, val, i;
 				if (strncmp(Token,"exists(",7)==0)
 				{
 					Tempstr=CopyStr(Tempstr,Token+7);
-					tptr=strrchr(Tempstr,')');
-					if (tptr) *tptr='\0';
+					StrRTruncChar(Tempstr, ')');
 
 					if (access(Tempstr,F_OK)==0) result=TRUE;
 					else result=FALSE;
@@ -155,8 +156,7 @@ int result=FALSE, val, i;
 				else if (strncmp(Token,"isatty(",7)==0)
 				{
 					Tempstr=CopyStr(Tempstr,Token+7);
-					tptr=strrchr(Tempstr,')');
-					if (tptr) *tptr='\0';
+					StrRTruncChar(Tempstr, ')');
 
 					if (strcmp(Tempstr,"stdin")==0) val=0;
 					else val=1;
@@ -168,8 +168,7 @@ int result=FALSE, val, i;
 				if (strncmp(Token,"notatty(",8)==0)
 				{
 					Tempstr=CopyStr(Tempstr,Token+8);
-					tptr=strrchr(Tempstr,')');
-					if (tptr) *tptr='\0';
+					StrRTruncChar(Tempstr, ')');
 					if (strcmp(Tempstr,"stdin")==0) val=0;
 					else val=1;
 					result= !isatty(val);
@@ -191,17 +190,17 @@ int result=FALSE, val, i;
 	}
 
 
-DestroyString(PrevToken);
-DestroyString(Tempstr);
-DestroyString(Token);
-DestroyString(Expr);
+Destroy(PrevToken);
+Destroy(Tempstr);
+Destroy(Token);
+Destroy(Expr);
 return(result);
 }
 
 
 
 
-int CrayonMatches(TCrayon *Crayon, char *sptr, char *eptr)
+static int CrayonMatches(TCrayon *Crayon, const char *sptr, const char *eptr)
 {
 char *ptr;
 int i, result=FALSE, pos1, pos2;
@@ -288,7 +287,7 @@ return(result);
 }
 
 
-void PassToProgram(STREAM *Pipe, char *ActivateLine, char *Program)
+static void PassToProgram(STREAM *Pipe, const char *ActivateLine, const char *Program)
 {
 STREAM *S, *CmdS, *CmdErr;
 char *Tempstr=NULL;
@@ -298,7 +297,7 @@ ListNode *Streams;
 Streams=ListCreate();
 CmdS=STREAMCreate();
 CmdErr=STREAMCreate();
-PipeSpawn( &(CmdS->out_fd), &(CmdS->in_fd), &(CmdErr->in_fd), Program, 0, "");
+PipeSpawn( &(CmdS->out_fd), &(CmdS->in_fd), &(CmdErr->in_fd), Program, "");
 
 ListAddItem(Streams,Pipe);
 ListAddItem(Streams,CmdS);
@@ -307,7 +306,7 @@ Tempstr=SetStrLen(Tempstr,4096);
 STREAMFlush(Pipe);
 
 if (StrLen(ActivateLine)) write(CmdS->out_fd,ActivateLine,StrLen(ActivateLine));
-write(1,"\n",1);
+//write(1,"\n",1);
 
 while (1)
 {
@@ -326,7 +325,7 @@ while (1)
 		{
 			result=STREAMReadBytes(CmdErr,Tempstr,4096);
 			if (result < 1) break;
-			write(1,Tempstr,result);
+			fwrite(Tempstr,1, result, stdout);
 		}
 
 		if (S==Pipe)
@@ -339,28 +338,21 @@ while (1)
 }
 
 STREAMClose(S);
-DestroyString(Tempstr);
+Destroy(Tempstr);
 }
 
 
 
-void FunctionCall(STREAM *Pipe, char *FuncName, char *Data, int DataLen)
-{
-ListNode *Curr, *Node;
 
-Curr=ListFindNamedItem(Functions, FuncName);
-if (Curr) Crayonize(Pipe, Data, DataLen, TRUE, (ListNode *) Curr->Item);
-}
-
-
-void ApplySingleAction(STREAM *Pipe, int *AttribLine, char *Line, int Len, char *MatchStart, char *MatchEnd, TCrayon *Action)
+static void ApplySingleAction(STREAM *Pipe, int *AttribLine, const char *Line, int Len, char *MatchStart, char *MatchEnd, TCrayon *Action)
 {
 int Attribs;
 int start, end, i;
-char *Tempstr=NULL, *EnvName=NULL, *Value=NULL, *ptr;
+char *Tempstr=NULL, *EnvName=NULL, *Value=NULL;
+char *ptr;
 TCrayon *StatusBar=NULL;
 
-if (GlobalFlags & FLAG_DONTCRAYON) return;
+	if (GlobalFlags & FLAG_DONTCRAYON) return;
 
 	StatusBar=StatusBarGetActive();
 
@@ -386,7 +378,7 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 
 
 		case ACTION_REPLACE:
-		strncpy(MatchStart,Action->String,MatchEnd-MatchStart);
+			strncpy(MatchStart,Action->String,MatchEnd-MatchStart);
 		break;
 
 		case ACTION_SETENV:
@@ -416,10 +408,12 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 			SetVar(Vars,"ExtraCmdLineOptions",Tempstr);
 		break;
 
+		/*
 		case ACTION_PLAYSOUND:
 			Tempstr=SubstituteVarsInString(Tempstr,Action->String,Vars,0);
 			SoundPlayFile("/dev/dsp",Tempstr,VOLUME_LEAVEALONE, PLAYSOUND_NONBLOCK);
 		break;
+		*/
 
 		case ACTION_EXEC:
 			Tempstr=SubstituteVarsInString(Tempstr,Action->String,Vars,0);
@@ -432,53 +426,55 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 		break;
 
 		case ACTION_SEND:
-			Tempstr=SubstituteVarsInString(Tempstr,Action->String,Vars,0);
+			if (StrValid(Action->String)) Tempstr=SubstituteVarsInString(Tempstr, Action->String, Vars, 0);
+			else Tempstr=SubstituteVarsInString(Tempstr, Line, Vars, 0);
 			STREAMWriteLine(Tempstr,Pipe); STREAMFlush(Pipe);
 			usleep(25000);
-			fprintf(stderr,"SEND '%s'\n",Tempstr);
+			//fprintf(stderr,"SEND '%s'\n",Tempstr);
 		break;
 
 		case ACTION_ECHO:
 			Tempstr=SubstituteVarsInString(Tempstr,Action->String,Vars,0);
-			write(1,Tempstr,StrLen(Tempstr));
+			fwrite(Tempstr,1, StrLen(Tempstr), stdout);
 		break;
 
 		case ACTION_ALTSCREEN:
-			write(1,"\x1b[?47h",6); 
+			fputs("\x1b[?47h",stdout); 
 		break;
 
 		case ACTION_NORMSCREEN:
-			write(1,"\x1b[?47l",6); 
+			fputs("\x1b[?47l",stdout); 
 		break;
 		
 		case ACTION_BELL:
-			write(1,"\x07",1);
+			fputs("\x07",stdout);
 		break;
 
 		case ACTION_XTERM_FGCOLOR:
 			EnvName=SubstituteVarsInString(EnvName,Action->String,Vars,0);
 			Tempstr=MCopyStr(Tempstr,"\x1b]10;",EnvName,"\007",NULL);
-			write(1,Tempstr,StrLen(Tempstr));
+			fputs(Tempstr, stdout);
 		break;
 
 		case ACTION_XTERM_BGCOLOR:
 			EnvName=SubstituteVarsInString(EnvName,Action->String,Vars,0);
 			Tempstr=MCopyStr(Tempstr,"\x1b]11;",EnvName,"\007",NULL);
-			write(1,Tempstr,StrLen(Tempstr));
+			fputs(Tempstr, stdout);
 		break;
 
 		case ACTION_RXVT_FGCOLOR:
 			EnvName=SubstituteVarsInString(EnvName,Action->String,Vars,0);
 			Tempstr=MCopyStr(Tempstr,"\x1b]39;",EnvName,"\007",NULL);
-			write(1,Tempstr,StrLen(Tempstr));
+			fputs(Tempstr, stdout);
 		break;
 
 		case ACTION_RXVT_BGCOLOR:
 			EnvName=SubstituteVarsInString(EnvName,Action->String,Vars,0);
 			Tempstr=MCopyStr(Tempstr,"\x1b]49;",EnvName,"\007",NULL);
-			write(1,Tempstr,StrLen(Tempstr));
+			fputs(Tempstr, stdout);
 		break;
 
+		/*
 		case ACTION_SET_XTITLE: 
 			EnvName=SubstituteTextValues(EnvName, MatchStart, end-start);
 			StripTrailingWhitespace(EnvName);
@@ -488,15 +484,25 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 			if (StrValid(ptr)) EnvName=SubstituteTextValues(EnvName, ptr, StrLen(ptr));
 			}
 			Tempstr=MCopyStr(Tempstr,"\x1b]2;",EnvName,"\x07", NULL);
-			write(1,Tempstr,StrLen(Tempstr));
+			fputs(Tempstr, stdout);
 		break;
+
+
+		case ACTION_RESTORE_XTITLE:
+			ptr=GetVar(Vars,"crayon_old_xtitle");
+			if (! StrValid(ptr)) ptr=GetVar(Vars,"crayon_default_xtitle");
+			Tempstr=MCopyStr(Tempstr,"\x1b]2;", ptr, "\x07", NULL);
+			fputs(Tempstr, stdout);
+		break;
+		*/
+
 
 		case ACTION_SET_XICONNAME: 
 			Tempstr=CopyStr(Tempstr,"\x1b]1;");
 			Tempstr=CatStrLen(Tempstr,MatchStart,end-start);
 			StripTrailingWhitespace(Tempstr);
 			Tempstr=CatStr(Tempstr,"\x07");
-			write(1,Tempstr,StrLen(Tempstr));
+			fputs(Tempstr, stdout);
 		break;
 
 		case ACTION_XSELECTION: 
@@ -505,74 +511,57 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 			Tempstr=CatStr(Tempstr,EnvName);
 			StripTrailingWhitespace(Tempstr);
 			Tempstr=CatStr(Tempstr,"\x07");
-			write(1,Tempstr,StrLen(Tempstr));
+			fputs(Tempstr, stdout);
 		break;
 
-
-		case ACTION_RESTORE_XTITLE:
-			ptr=GetVar(Vars,"crayon_old_xtitle");
-			if (! StrValid(ptr)) ptr=GetVar(Vars,"crayon_default_xtitle");
-			Tempstr=MCopyStr(Tempstr,"\x1b]2;", ptr, "\x07", NULL);
-			write(1,Tempstr,StrLen(Tempstr));
-		break;
 
 		case ACTION_DEICONIFY: 
-			Tempstr=CopyStr(Tempstr,"\x1b[1t");
-			write(1,Tempstr,StrLen(Tempstr));
+			fputs("\x1b[1t",stdout);
 		break;
 
 		case ACTION_ICONIFY: 
-			Tempstr=CopyStr(Tempstr,"\x1b[2t");
-			write(1,Tempstr,StrLen(Tempstr));
+			fputs("\x1b[2t", stdout);
 		break;
 
 		case ACTION_DEMAXIMIZE: 
-			Tempstr=CopyStr(Tempstr,"\x1b[9;0t");
-			write(1,Tempstr,StrLen(Tempstr));
+			fputs("\x1b[9;0t", stdout);
 		break;
 
 		case ACTION_MAXIMIZE: 
-			Tempstr=CopyStr(Tempstr,"\x1b[9;1t");
-			write(1,Tempstr,StrLen(Tempstr));
+			fputs("\x1b[9;1t", stdout);
 		break;
 
 		case ACTION_HIGH: 
-			Tempstr=CopyStr(Tempstr,"\x1b[9;2t");
-			write(1,Tempstr,StrLen(Tempstr));
+			fputs("\x1b[9;2t", stdout);
 		break;
 
 		case ACTION_WIDE: 
-			Tempstr=CopyStr(Tempstr,"\x1b[9;3t");
-			write(1,Tempstr,StrLen(Tempstr));
+			fputs("\x1b[9;3t", stdout);
 		break;
 
 		case ACTION_XRAISE: 
-			Tempstr=CopyStr(Tempstr,"\x1b[5t");
-			write(1,Tempstr,StrLen(Tempstr));
+			fputs("\x1b[5t", stdout);
 		break;
 
 		case ACTION_XLOWER: 
-			Tempstr=CopyStr(Tempstr,"\x1b[6t");
-			write(1,Tempstr,StrLen(Tempstr));
+			fputs("\x1b[6t", stdout);
 		break;
 
 		case ACTION_FONT_UP:
-			Tempstr=CopyStr(Tempstr,"\x1b[?35h\x1b]50;#+1\x07");
-			write(1,Tempstr,StrLen(Tempstr));
+			fputs("\x1b[?35h\x1b]50;#+1\x07", stdout);
 		break;
 
 		case ACTION_FONT_DOWN:
-			Tempstr=CopyStr(Tempstr,"\x1b[?35h\x1b]50;#-1\x07");
-			write(1,Tempstr,StrLen(Tempstr));
+			fputs("\x1b[?35h\x1b]50;#-1\x07", stdout);
 		break;
 
 		case ACTION_FONT:
 			Tempstr=MCopyStr(Tempstr,"\x1b[?35h\x1b]50;",Action->String,"\x07", NULL);
-			write(1,Tempstr,StrLen(Tempstr));
+			fputs(Tempstr, stdout);
 		break;
 
 		case ACTION_CLEARSCREEN:
-			write(1,CLRSCR,StrLen(CLRSCR)); 
+			fputs(CLRSCR, stderr);
 		break;
 
 		case ACTION_FUNCCALL:
@@ -594,9 +583,14 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 		else if (StatusBar==Action) StatusBarCloseActive();
 	break;
 
-		case ACTION_EDIT:
-			StatusBarHandleInput(Pipe, NULL, Action->String);
-		break;
+	case ACTION_HISTORYBAR:
+		if (! StatusBar) TypingHistoryPopup(Action);
+		else if (StatusBar==Action) StatusBarCloseActive();
+	break;
+
+	case ACTION_EDIT:
+		StatusBarHandleInput(Pipe, NULL, Action->String);
+	break;
 
 		case ACTION_DONTCRAYON:
 			//use '=' not '|=' here because we don't want it to honor
@@ -622,13 +616,13 @@ if (GlobalFlags & FLAG_DONTCRAYON) return;
 		}
 	}
 
-	DestroyString(Tempstr);
-	DestroyString(EnvName);
-	DestroyString(Value);
+	Destroy(Tempstr);
+	Destroy(EnvName);
+	Destroy(Value);
 }
 
 
-int IsMatchType(TCrayon *Crayon)
+static int IsMatchType(TCrayon *Crayon)
 {
 
 switch (Crayon->Type)
@@ -650,23 +644,23 @@ return(FALSE);
 
 
 
-int ProcessSubactions(STREAM *Pipe, int *AttribLine, char *Line, int Len, char *MatchStart, char *MatchEnd, TCrayon *Crayon)
+static int ProcessSubactions(STREAM *Pipe, int *AttribLine, const char *Line, int Len, char *MatchStart, char *MatchEnd, TCrayon *Crayon)
 {
 int i;
 
-	for (i=0; i < Crayon->ActionCount; i++)
+for (i=0; i < Crayon->ActionCount; i++)
+{
+	if (IsMatchType(&Crayon->Actions[i]))
 	{
-		if (IsMatchType(&Crayon->Actions[i]))
-		{
-			ProcessCrayonization(Pipe, Line, Len, AttribLine, &Crayon->Actions[i]);
-		}
-		else ApplyActions(Pipe, AttribLine, Line, Len, MatchStart, MatchEnd, &Crayon->Actions[i]);
+		ProcessCrayonization(Pipe, Line, Len, AttribLine, &Crayon->Actions[i]);
 	}
+	else ApplyActions(Pipe, AttribLine, Line, Len, MatchStart, MatchEnd, &Crayon->Actions[i]);
+}
 }
 
 
 
-int ProcessActionAndSubactions(STREAM *Pipe, int *AttribLine, char *Line, int Len, char *MatchStart, char *MatchEnd, TCrayon *Crayon)
+static int ProcessActionAndSubactions(STREAM *Pipe, int *AttribLine, const char *Line, int Len, char *MatchStart, char *MatchEnd, TCrayon *Crayon)
 {
 int result=FALSE;
 
@@ -682,7 +676,7 @@ int result=FALSE;
 
 //This function handles action types that involve adding lines of text to the output,
 //usually appends and prepends
-void AppendTextAction(STREAM *Pipe, TCrayon *Crayon)
+static void AppendTextAction(STREAM *Pipe, TCrayon *Crayon)
 {
 int Len, *Attribs=NULL;
 char *Tempstr=NULL;
@@ -706,16 +700,59 @@ char *Tempstr=NULL;
 			break;
 		}
 
-		DestroyString(Tempstr);
+		Destroy(Tempstr);
 		free(Attribs);
 }
 
+static void OutputLineWithAttributes(const char *Line, int *Attribs, int Len)
+{
+int i, LastAttrib=0, BgAttr;
+char *Tempstr=NULL;
 
-int ApplyActions(STREAM *Pipe, int *AttribLine, char *Line, int Len, char *MatchStart, char *MatchEnd, TCrayon *Crayon)
+if (! Attribs) return;
+if (Attribs[0] & FLAG_HIDE) return;
+
+for (i=0; i < Len; i++)
+{
+	if (Attribs[i] != LastAttrib) 
+	{
+		Tempstr=CatStr(Tempstr,NORM);
+
+		//Bg colors are set into the higher byte of 'attribs', so that we 
+		//can hold both fg and bg in the same int, thus we must shift them down
+		BgAttr=(Attribs[i] & 0xFF00) >> 8;
+
+		if (Attribs[i] > 0) Tempstr=CatStr(Tempstr,ANSICode(Attribs[i] & 0x00FF, BgAttr, Attribs[i] & 0xFF0000));
+		LastAttrib=Attribs[i];
+	}
+	if (LastAttrib & FLAG_CAPS) Tempstr=AddCharToStr(Tempstr,toupper(Line[i]));
+	else if (LastAttrib & FLAG_LOWERCASE) Tempstr=AddCharToStr(Tempstr,tolower(Line[i]));
+	else if ((LastAttrib & FLAG_CLR2EOL) && (Line[i]=='\n')) Tempstr=CatStr(Tempstr, "\x1b[K\n");
+	//Translate 'del' to 'erase'
+	else if (Line[i]=='\177') Tempstr=CatStr(Tempstr,"\010 \010");
+	else Tempstr=AddCharToStr(Tempstr,Line[i]);
+}
+
+if (LastAttrib > 0) Tempstr=CatStr(Tempstr,NORM);
+fwrite(Tempstr,1, StrLen(Tempstr), stdout);
+Destroy(Tempstr);
+}
+
+void FunctionCall(STREAM *Pipe, const char *FuncName, const char *Data, int DataLen)
+{
+ListNode *Curr, *Node;
+
+Curr=ListFindNamedItem(Functions, FuncName);
+if (Curr) Crayonize(Pipe, Data, DataLen, TRUE, (ListNode *) Curr->Item);
+}
+
+
+
+int ApplyActions(STREAM *Pipe, int *AttribLine, const char *Line, int Len, char *MatchStart, char *MatchEnd, TCrayon *Crayon)
 {
 int i,sum=0;
-char *ptr;
 int result=0;
+const char *ptr;
 
 if (GlobalFlags & FLAG_DONTCRAYON) return(FALSE);
 
@@ -783,7 +820,7 @@ return(result);
 
 
 //AttribLine is the string of attribute values for each char in Line
-void ColorSubstring(STREAM *Pipe, int *AttribLine, char *Line, int Len, TCrayon *Crayon)
+void ColorSubstring(STREAM *Pipe, int *AttribLine, const char *Line, int Len, TCrayon *Crayon)
 {
 int result;
 ListNode *Matches, *Curr;
@@ -799,54 +836,21 @@ TPMatch *Match;
 		while (Curr)
 		{
 			Match=(TPMatch *) Curr->Item;
-			ApplyActions(Pipe, AttribLine, Line, Len, Match->Start, Match->End, Crayon);
+			if (Match->End) ApplyActions(Pipe, AttribLine, Line, Len, Match->Start, Match->End, Crayon);
 		Curr=ListGetNext(Curr);
 		}
 	}
 	
-	ListDestroy(Matches,DestroyString);
+	ListDestroy(Matches,Destroy);
 
 }
 
 
-void OutputLineWithAttributes(char *Line, int *Attribs, int Len)
+
+
+int ProcessCrayonization(STREAM *Pipe, const char *Line, int Len, int *Attribs, TCrayon *Crayon)
 {
-int i, LastAttrib=0, BgAttr;
-char *Tempstr=NULL;
-
-if (! Attribs) return;
-if (Attribs[0] & FLAG_HIDE) return;
-
-for (i=0; i < Len; i++)
-{
-	if (Attribs[i] != LastAttrib) 
-	{
-		Tempstr=CatStr(Tempstr,NORM);
-
-		//Bg colors are set into the higher byte of 'attribs', so that we 
-		//can hold both fg and bg in the same int, thus we must shift them down
-		BgAttr=(Attribs[i] & 0xFF00) >> 8;
-
-		if (Attribs[i] > 0) Tempstr=CatStr(Tempstr,ANSICode(Attribs[i] & 0x00FF, BgAttr, Attribs[i] & 0xFF0000));
-		LastAttrib=Attribs[i];
-	}
-	if (LastAttrib & FLAG_CAPS) Tempstr=AddCharToStr(Tempstr,toupper(Line[i]));
-	else if (LastAttrib & FLAG_LOWERCASE) Tempstr=AddCharToStr(Tempstr,tolower(Line[i]));
-	else if ((LastAttrib & FLAG_CLR2EOL) && (Line[i]=='\n')) Tempstr=CatStr(Tempstr, "\x1b[K\n");
-	else Tempstr=AddCharToStr(Tempstr,Line[i]);
-}
-
-if (LastAttrib > 0) Tempstr=CatStr(Tempstr,NORM);
-write(1,Tempstr,StrLen(Tempstr));
-DestroyString(Tempstr);
-}
-
-
-
-
-int ProcessCrayonization(STREAM *Pipe, char *Line, int Len, int *Attribs, TCrayon *Crayon)
-{
- char *p_SectionStart, *p_SectionEnd, *ptr;
+ const char *p_SectionStart, *p_SectionEnd, *ptr;
  char *WorkingSpace=NULL;
  int *WorkingAttribs=NULL;
  int result=FALSE;
@@ -883,8 +887,8 @@ int ProcessCrayonization(STREAM *Pipe, char *Line, int Len, int *Attribs, TCrayo
 	ptr=Line+Len;
 	if (Line+Crayon->Start >= ptr) 
 	{
-		DestroyString(WorkingSpace);
-		DestroyString(WorkingAttribs);
+		Destroy(WorkingSpace);
+		Destroy(WorkingAttribs);
 		return(FALSE); 
 	}
 	p_SectionStart=Line+Crayon->Start;
@@ -905,14 +909,14 @@ int ProcessCrayonization(STREAM *Pipe, char *Line, int Len, int *Attribs, TCrayo
 	break;
 	}
 
-	DestroyString(WorkingSpace);
-	DestroyString(WorkingAttribs);
+	Destroy(WorkingSpace);
+	Destroy(WorkingAttribs);
 
 return(result);
 }
 
 
-void Crayonize(STREAM *Pipe, char *Line, int Len, int IsFuncCall, ListNode *CrayonList)
+void Crayonize(STREAM *Pipe, const char *Line, int Len, int IsFuncCall, ListNode *CrayonList)
 {
 int *Attribs=NULL;
 ListNode *Curr;

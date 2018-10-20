@@ -10,7 +10,7 @@ char *Tempstr=NULL;
 Tempstr=FormatStr(Tempstr,"%d",time(NULL) - StartTime);
 SetVar(Vars,"crayon_duration",Tempstr);
 setenv("crayon_duration",Tempstr,TRUE);
-DestroyString(Tempstr);
+Destroy(Tempstr);
 }
 
 void UpdateTimer(TCrayon *Timer)

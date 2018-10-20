@@ -1,3 +1,7 @@
+version 2.0 removes sound support, as this caused all kinds of headaches. Sound support will likely come back in a future release.
+
+
+
 Version 0.5 includes a few important changes.
 
 keyboard input is no longer automatically passed to the crayonized program, the new setting 'passinput' must be included in the entry for a given program.

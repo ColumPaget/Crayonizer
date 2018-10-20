@@ -2,41 +2,19 @@
 #include "status_bar.h"
 #include "config_file.h"
 #include "crayonizations.h"
+#include "history.h"
 
 TCrayon *KeyPresses=NULL;
 int NoOfKeyPresses=0;
 int KeypressFlags=0;
 
 
-//This parses 'keypress' entries in the config file
-TCrayon *KeypressParse(char *Data)
-{
-TCrayon *KP;
-char *ptr;
-
-
-if ((NoOfKeyPresses % 10)==0) 
-{
-	KeyPresses=(TCrayon *) realloc((void *) KeyPresses, (NoOfKeyPresses+10) * sizeof(TCrayon));
-}
-
-KP=KeyPresses + NoOfKeyPresses;
-memset(KP,0,sizeof(TCrayon));
-KP->Type=CRAYON_KEYPRESS;
-ptr=GetToken(Data,"\\S",&KP->Match,0);
-ParseActionToken(ptr,KP);
-
-NoOfKeyPresses++;
-
-return(KP);
-}
-
 
 
 
 
 //This parses a function-key string sent from keyboard
-int ParseFunctionKey(char *KeySym, int MaxLen, char *ModName, char K1, char K2)
+static int ParseFunctionKey(char *KeySym, int MaxLen, char *ModName, char K1, char K2)
 {
 switch (K1)
 {
@@ -83,7 +61,7 @@ break;
 
 
 
-int ParseModifiedKey(char *KeySym, int MaxLen, char *ModName, char Key)
+static int ParseModifiedKey(char *KeySym, int MaxLen, char *ModName, char Key)
 {
 
 	switch (Key)
@@ -120,7 +98,7 @@ int ParseModifiedKey(char *KeySym, int MaxLen, char *ModName, char Key)
 
 //Sequences that consist of <esc>[<digit> can have a modifier character at 
 //the end
-char ReadCSI_Num_Mod(STREAM *StdIn, char Digit, char *KeySym, int MaxLen)
+static char ReadCSI_Num_Mod(STREAM *StdIn, char Digit, char *KeySym, int MaxLen)
 {
 int result;
 char inchar=0, *Num=NULL, *Modifier=NULL;
@@ -190,11 +168,32 @@ switch (inchar)
 		case '^':
 		ParseFunctionKey(KeySym, MaxLen, "ctrl-", Num[0], Num[1]);
 		break;
+
+		case '0':
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+		case '6':
+		case '7':
+		case '8':
+		case '9':
+		Num=AddCharToStr(Num,inchar);
+		result=STREAMReadBytes(StdIn, &inchar,1);
+		switch (inchar)
+		{
+			case '~':
+				if (strcmp(Num, "200")==0) KeySym=CopyStr(KeySym, "paste") ;
+				if (strcmp(Num, "201")==0) KeySym=CopyStr(KeySym, "paste-end") ;
+			break;
+		}
+		break;
 		}
 	break;
 }
 
-DestroyString(Num);
+Destroy(Num);
 return(inchar);
 }
 
@@ -202,7 +201,7 @@ return(inchar);
 
 
 
-int ReadEscapeSequence(STREAM *StdIn, char *Sequence, char *KeySym, int MaxLen)
+static int ReadEscapeSequence(STREAM *StdIn, char *Sequence, char *KeySym, int MaxLen)
 {
 int result;
 char *ptr, *end;
@@ -314,7 +313,7 @@ return(end-Sequence);
 
 
 
-int KeyPressRead(STREAM *StdIn, char **Data, char **KeySym, int MaxLen)
+static int KeyPressRead(STREAM *StdIn, char **Data, char **KeySym, int MaxLen)
 {
 int result, i, j;
 TCrayon *KP;
@@ -323,7 +322,7 @@ TCrayon *KP;
 *KeySym=SetStrLen(*KeySym,MaxLen);
 
 result=STREAMReadBytes(StdIn, *Data ,1);
-(*Data)[1]='\0'; 
+StrTrunc(*Data, 1); 
 
 if (result > 0)
 {
@@ -357,7 +356,7 @@ return(result);
 }
 
 
-int FindKeypressAction(STREAM *Out, const char *KeySym)
+static int FindKeypressAction(STREAM *Out, const char *KeySym)
 {
 int i;
 
@@ -376,6 +375,29 @@ for (i=0; i < NoOfKeyPresses; i++)
 	return(FALSE);
 }
 
+//This parses 'keypress' entries in the config file
+TCrayon *KeypressParse(const char *Data)
+{
+TCrayon *KP;
+const char *ptr;
+
+
+if ((NoOfKeyPresses % 10)==0) 
+{
+	KeyPresses=(TCrayon *) realloc((void *) KeyPresses, (NoOfKeyPresses+10) * sizeof(TCrayon));
+}
+
+KP=KeyPresses + NoOfKeyPresses;
+memset(KP,0,sizeof(TCrayon));
+KP->Type=CRAYON_KEYPRESS;
+ptr=GetToken(Data,"\\S",&KP->Match,0);
+ParseActionToken(ptr,KP);
+
+NoOfKeyPresses++;
+
+return(KP);
+}
+
 
 
 int KeypressProcess(STREAM *StdIn, STREAM *Out)
@@ -387,18 +409,20 @@ int MaxLen=20;
 bytes_read=KeyPressRead(StdIn, &Tempstr, &KeySym, MaxLen);
 if (bytes_read > 0)
 {
-		if (FindKeypressAction(Out, KeySym)) bytes_read=0;
-    else if (StatusBarHandleInput(Out, Tempstr, KeySym)) bytes_read=0;
+    if (StatusBarHandleInput(Out, Tempstr, KeySym)) bytes_read=0;
+		else if (FindKeypressAction(Out, KeySym)) bytes_read=0;
 		else
 		{
+			TypingHistoryAddKeypress(Tempstr, bytes_read);
   		STREAMWriteBytes(Out,Tempstr,bytes_read);
   		STREAMFlush(Out);
 		}
 }
 
-DestroyString(Tempstr);
-DestroyString(KeySym);
+Destroy(Tempstr);
+Destroy(KeySym);
 
 return(bytes_read);
 }
+
 

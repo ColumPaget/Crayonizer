@@ -1,6 +1,7 @@
 #include "signals.h"
 #include <sys/ioctl.h>
 #include <signal.h>
+#include "status_bar.h"
 
 void HandleSigwinch(STREAM *Pipe)
 {
@@ -11,14 +12,14 @@ void HandleSigwinch(STREAM *Pipe)
 
 		ScreenRows=w.ws_row;
 		ScreenCols=w.ws_col;
-		if (GlobalFlags & HAS_STATUSBAR) SetupStatusBars();
+		if (GlobalFlags & HAS_STATUSBAR) SetupStatusBars(NULL, NULL);
 		else
 		{
 //		w.ws_row--;	
 
     if (Pipe) ioctl(Pipe->out_fd, TIOCSWINSZ, &w);
 		}
-		DestroyString(Tempstr);
+		Destroy(Tempstr);
 }
 
 
@@ -33,7 +34,7 @@ if (sig==SIGINT) GlobalFlags |= GOT_SIGINT;
 
 
 
-void PropogateSignals(STREAM *Pipe)
+void PropagateSignals(STREAM *Pipe)
 {
 int PeerPID;
 

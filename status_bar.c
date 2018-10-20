@@ -53,7 +53,7 @@ char *ANSI=NULL;
   ANSI=FormatStr(ANSI,"\x1b[%d;%dr\x1b[%d;%dH",TopMargin+1,ScrollAreaEnd-1,cursy,cursx);
   write(1,ANSI,StrLen(ANSI));
 
-	DestroyString(ANSI);
+	Destroy(ANSI);
 
 return(ScrollAreaEnd);
 }
@@ -65,7 +65,8 @@ return(ScrollAreaEnd);
 //This parses 'keypress' entries in the config file
 void StatusBarParseSelection(STREAM *S, const char *Name)
 {
-char *Tempstr=NULL, *Token=NULL, *ptr;
+char *Tempstr=NULL, *Token=NULL;
+const char *ptr;
 TCrayon *Item, *SubItem;
 ListNode *Curr;
 
@@ -97,44 +98,8 @@ while (Tempstr)
 Tempstr=STREAMReadLine(Tempstr,S);
 }
 
-DestroyString(Tempstr);
-DestroyString(Token);
-}
-
-
-//Close any temporary statusbars created on a keypress
-void StatusBarCloseTemps(ListNode *List)
-{
-ListNode *Curr, *Next;
-TStatusBar *SB;
-
-Curr=ListGetNext(List);
-while (Curr)
-{
-SB=(TStatusBar *) Curr->Item;
-Next=ListGetNext(Curr);
-if (SB->Flags & STATUSBAR_CLOSE_ON_NEW)
-{
-	StatusBarClose(SB);
-	ListDeleteNode(Curr);
-}
-Curr=Next;
-}
-}
-
-void StatusBarPushStack(TStatusBar *Top, TStatusBar *Bottom)
-{
-ListNode *Curr;
-if (! g_TopSB) g_TopSB=ListCreate();
-if (! g_BottomSB) g_BottomSB=ListCreate();
-
-//Close any temporary statusbars created on a keypress
-if (Top) StatusBarCloseTemps(g_TopSB);
-if (Bottom) StatusBarCloseTemps(g_BottomSB);
-
-
-if (Top) ListAddItem(g_TopSB, Top);
-if (Bottom) ListAddItem(g_BottomSB, Bottom);
+Destroy(Tempstr);
+Destroy(Token);
 }
 
 
@@ -183,7 +148,7 @@ char *ANSI=NULL;
 	ANSI=FormatStr(ANSI,"\x1b[%d;%dH",y,x);
   write(1,ANSI,StrLen(ANSI));
 
-DestroyString(ANSI);
+Destroy(ANSI);
 }
 
 
@@ -193,13 +158,21 @@ ListNode *Curr;
 
 if (SB->Flags & FLAG_PERSIST) return;
 Curr=ListFindItem(g_TopSB, SB);
-if (Curr) ListDeleteNode(Curr);
+if (Curr) 
+{
+	ListDeleteNode(Curr);
+	g_TopSB=NULL;
+}
 
 Curr=ListFindItem(g_BottomSB, SB);
-if (Curr) ListDeleteNode(Curr);
+if (Curr) 
+{
+	ListDeleteNode(Curr);
+	g_BottomSB=NULL;
+}
 
-DestroyString(SB->Text);
-ListDestroy(SB->Items,DestroyString);
+Destroy(SB->Text);
+ListDestroy(SB->Items,Destroy);
 free(SB);
 
 UpdateStatusBars(FALSE);
@@ -216,6 +189,46 @@ int ScrollTop=0, ScrollBottom=0;
 	SetScrollRegion(ScrollTop, ScrollBottom);
 	Active=NULL;
 }
+
+
+
+//Close any temporary statusbars created on a keypress
+void StatusBarCloseTemps(ListNode *List)
+{
+ListNode *Curr, *Next;
+TStatusBar *SB;
+
+Curr=ListGetNext(List);
+while (Curr)
+{
+SB=(TStatusBar *) Curr->Item;
+Next=ListGetNext(Curr);
+if (SB->Flags & STATUSBAR_CLOSE_ON_NEW)
+{
+	StatusBarClose(SB);
+	ListDeleteNode(Curr);
+}
+Curr=Next;
+}
+}
+
+
+void StatusBarPushStack(TStatusBar *Top, TStatusBar *Bottom)
+{
+ListNode *Curr;
+if (! g_TopSB) g_TopSB=ListCreate();
+if (! g_BottomSB) g_BottomSB=ListCreate();
+
+//Close any temporary statusbars created on a keypress
+if (Top) StatusBarCloseTemps(g_TopSB);
+if (Bottom) StatusBarCloseTemps(g_BottomSB);
+
+
+if (Top) ListAddItem(g_TopSB, Top);
+if (Bottom) ListAddItem(g_BottomSB, Bottom);
+}
+
+
 
 void StatusBarCloseActive()
 {
@@ -253,8 +266,8 @@ char *ptr, *Tempstr=NULL, *DefaultStr=NULL;
 		else RetStr=MCatStr(RetStr,SB->EditText,ANSICode(ANSI_RED,0,ANSI_INVERSE)," ",NORM,DefaultStr, NULL);
 	}
 
-	DestroyString(DefaultStr);
-	DestroyString(Tempstr);
+	Destroy(DefaultStr);
+	Destroy(Tempstr);
 
 return(RetStr);
 }
@@ -274,30 +287,29 @@ char *ANSI=NULL;
 
 	ANSI=FormatStr(ANSI,"\x1b[%d;0H",SB->pos);
 	ANSI=MCatStr(ANSI, ANSICode(SB->Attribs & 0xFF, (SB->Attribs & 0xFF00) >> 8, SB->Attribs & 0xFF0000), NULL);
-  write(1,ANSI,StrLen(ANSI));
+	fputs(ANSI, stdout);
+
+	if (SB->Curr && (SB->Type==ACTION_HISTORYBAR)) SB->Text=CopyStr(SB->Text, SB->Curr->Item);
 
 	ANSI=SubstituteTextValues(ANSI, SB->Text, ScreenCols);
 
-	if (SB->Type==ACTION_QUERYBAR)
-	{
-		ANSI=FormatStatusEditText(ANSI, SB);
-	}
+	if (SB->Type==ACTION_QUERYBAR) ANSI=FormatStatusEditText(ANSI, SB);
 
 	//Clear to end of line
 	ANSI=MCatStr(ANSI, "\x1b[K", NORM, NULL);
-	write(1,ANSI,StrLen(ANSI));
+	fputs(ANSI, stdout);
 
 	ANSI=FormatStr(ANSI,"\x1b[%d;%dH",y,x);
-  write(1,ANSI,StrLen(ANSI));
+	fputs(ANSI, stdout);
 
-	DestroyString(ANSI);
+	Destroy(ANSI);
 }
 
 
 
 			
 
-int StatusBarParseKeySym(char *KeySym)
+static int StatusBarParseKeySym(const char *KeySym)
 {
 int len;
 char *Tempstr=NULL, *ptr;
@@ -342,24 +354,30 @@ return(0);
 
 
 
-void EditBarHandleInput(TStatusBar *SB, STREAM *Out, char *Input, int Action)
+static void EditBarHandleInput(TStatusBar *SB, STREAM *Out, const char *Input, int Action)
 {
 int len;
 char *Tempstr=NULL, *ptr;
+ListNode *Node;
 
 if (SB->EditCursor > SB->EditLen) SB->EditCursor=SB->EditLen;
 switch (Action)
 {
 	case SB_EDIT_PREV:
-		if (! SB->Curr) SB->Curr=ListGetLast(SB->Items);
-		else SB->Curr=ListGetPrev(SB->Curr);
+		if (! SB->Curr) Node=ListGetLast(SB->Items);
+		else Node=ListGetPrev(SB->Curr);
+
+		if (Node) SB->Curr=Node;
 
 		if (SB->Curr) SB->EditText=CopyStr(SB->EditText, (char *) SB->Curr->Item);
 		SB->EditLen=StrLen(SB->EditText);
 	break;
 	
 	case SB_EDIT_NEXT:
-		SB->Curr=ListGetNext(SB->Curr);
+		Node=ListGetNext(SB->Curr);
+
+		if (Node) SB->Curr=Node;
+
 		if (SB->Curr) SB->EditText=CopyStr(SB->EditText, (char *) SB->Curr->Item);
 		SB->EditLen=StrLen(SB->EditText);
 	break;
@@ -378,7 +396,7 @@ switch (Action)
 			SB->EditLen--;
 			ptr=SB->EditText+SB->EditCursor;
 			if (SB->EditCursor < SB->EditLen) memmove(ptr,ptr+1,StrLen(ptr+1)+1);
-			else *ptr='\0';
+			else StrTrunc(SB->EditText, ptr - SB->EditText);
 		}
 	break;
 
@@ -394,12 +412,19 @@ switch (Action)
 			SB->EditCursor--;
 			ptr=SB->EditText+SB->EditCursor;
 			if (SB->EditCursor < SB->EditLen) memmove(ptr,ptr+1,StrLen(ptr+1)+1);
-			else *ptr='\0';
+			else StrTrunc(SB->EditText, ptr - SB->EditText);
 		}
 	break;
 
 	case SB_EDIT_ENTER:
-		StatusBarAddHistory(SB, SB->EditText);
+		StatusBarHide(SB);
+		if (SB->Type == ACTION_HISTORYBAR) 
+		{
+			SB->EditText=CopyStr(SB->EditText, SB->Text);	
+			SB->EditLen=StrLen(SB->EditText);	
+		}
+		else StatusBarAddHistory(SB, SB->EditText);
+
 		FunctionCall(Out, SB->FuncName, SB->EditText, SB->EditLen);
 		SB->EditText=CopyStr(SB->EditText,"");
 		SB->EditLen=0;
@@ -424,14 +449,14 @@ switch (Action)
 
 DrawStatusBar(SB);
 
-DestroyString(Tempstr);
+Destroy(Tempstr);
 }
 
 
 
 
 
-int QueryBarHandleInput(TStatusBar *QB, STREAM *Out, char *Input, char *KeySym)
+int QueryBarHandleInput(TStatusBar *QB, STREAM *Out, const char *Input, const char *KeySym)
 {
 char *ptr;
 int len, Action, result=FALSE;
@@ -447,11 +472,9 @@ switch (Action)
 	break;
 
 	case SB_EDIT_ENTER:
-	//ptr=QB->EditText;
-	//len=StrLen(ptr);
-	//ProcessSubactions(Out, NULL, ptr, len, ptr, ptr+len, QB->Action);
 	EditBarHandleInput(QB, Out, Input, Action);
 	StatusBarClose(QB);
+	UpdateStatusBars(TRUE);
 	result=TRUE;
 	break;
 
@@ -492,7 +515,7 @@ else RetStr=MCatStr(RetStr, "  ",Curr->Item, "  ",NULL);
 Curr=ListGetNext(Curr);
 }
 
-if (StrLen(RetStr) > WinWidth) RetStr[WinWidth]='\0';
+if (StrLen(RetStr) > WinWidth) StrTrunc(RetStr, WinWidth);
 
 return(RetStr);
 }
@@ -549,14 +572,14 @@ else if (strcmp(KeySym, "return")==0)
 	result=TRUE;
 }
 
-DestroyString(Tempstr);
+Destroy(Tempstr);
 
 return(result);
 }
 
 
 
-int StatusBarHandleInput(STREAM *Out, char *Input, char *KeySym)
+int StatusBarHandleInput(STREAM *Out, const char *Input, const char *KeySym)
 {
 TStatusBar *SB;
 int result=FALSE;
@@ -572,6 +595,7 @@ if (SB)
 		break;
 
 		case ACTION_QUERYBAR:
+		case ACTION_HISTORYBAR:
 		result=QueryBarHandleInput(SB, Out, Input, KeySym);
 		break;
 	}
@@ -633,6 +657,7 @@ else SetupStatusBars(NULL, QB);
 }
 
 
+
 int QueryBar(TCrayon *Action)
 {
 TStatusBar *QB;
@@ -642,7 +667,7 @@ String=MCopyStr(String, Action->Match, " %E", NULL);
 QB=StatusBarCreate(ACTION_QUERYBAR, Action, String);
 SetupStatusBars(NULL, QB);
 
-DestroyString(String);
+Destroy(String);
 return(TRUE);
 }
 
@@ -651,7 +676,8 @@ return(TRUE);
 int SelectionBar(TCrayon *Setup)
 {
 TStatusBar *SB;
-char *Tempstr=NULL, *KeySym=NULL, *ptr;
+char *Tempstr=NULL, *KeySym=NULL;
+const char *ptr;
 int WinWidth;
 
 SB=StatusBarCreate(ACTION_SELECTBAR, Setup, "");
@@ -669,9 +695,38 @@ SB->Curr=ListGetNext(SB->Items);
 SB->Text=SelectionBarBuildText(SB->Text, SB->Items, SB->Curr, ScreenCols);
 SetupStatusBars(NULL, SB);
 
-DestroyString(Tempstr);
-DestroyString(KeySym);
+Destroy(Tempstr);
+Destroy(KeySym);
 
+return(TRUE);
+}
+
+
+
+int HistoryBar(ListNode *Items, TCrayon *Action)
+{
+TStatusBar *HB;
+ListNode *Curr;
+char *String=NULL;
+
+Curr=ListGetLast(Items);
+if (Curr)
+{
+HB=StatusBarCreate(ACTION_HISTORYBAR, Action, "%E ");
+if (! HB->Items) HB->Items=ListCreate();
+
+while (Curr)
+{
+	ListAddItem(HB->Items, CopyStr(NULL, Curr->Tag));
+	Curr=ListGetPrev(Curr);
+}
+
+HB->Curr=ListGetNext(HB->Items);
+
+SetupStatusBars(NULL, HB);
+}
+
+Destroy(String);
 return(TRUE);
 }
 

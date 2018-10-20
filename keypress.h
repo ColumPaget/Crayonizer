@@ -11,7 +11,7 @@
 extern int KeypressFlags;
 
 
-TCrayon *KeypressParse(char *Name);
+TCrayon *KeypressParse(const char *Name);
 int KeypressProcess(STREAM *StdIn, STREAM *Out);
 
 

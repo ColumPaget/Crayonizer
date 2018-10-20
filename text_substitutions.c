@@ -10,15 +10,15 @@
 
 
 
-int GetLoad()
+static int GetLoad()
 {
 STREAM *S;
 char *Tempstr=NULL, *Token=NULL;
-char *ptr;
+const char *ptr;
 int Total=0, Idle, result=0;
 static int LastTotal=0, LastIdle=0;
 
-S=STREAMOpenFile(SYS_STAT_PATH, SF_RDONLY);
+S=STREAMOpen(SYS_STAT_PATH, "r");
 if (S)
 {
 	Tempstr=STREAMReadLine(Tempstr, S);
@@ -48,8 +48,8 @@ if (S)
 	STREAMClose(S);
 }
 
-DestroyString(Tempstr);
-DestroyString(Token);
+Destroy(Tempstr);
+Destroy(Token);
 
 result=100-result;
 return(result);
@@ -57,23 +57,23 @@ return(result);
 
 
 
-double GetMemUsage()
+static double GetMemUsage()
 {
 double total=0, val=0;
 char *Tempstr=NULL;
 STREAM *S=NULL;
 float ftotal=0;
 
-S=STREAMOpenFile(MEMINFO_PATH, SF_RDONLY);
+S=STREAMOpen(MEMINFO_PATH, "r");
 if (S)
 {
 	Tempstr=STREAMReadLine(Tempstr, S);
 	while (Tempstr)
 	{
-		if (strncmp(Tempstr, "MemTotal:", 9)==0) total=ParseHumanReadableDataQty(Tempstr+9, 0);
-		if (strncmp(Tempstr, "MemFree:", 8)==0) val+=ParseHumanReadableDataQty(Tempstr+8, 0);
-		if (strncmp(Tempstr, "Buffers:", 8)==0) val+=ParseHumanReadableDataQty(Tempstr+8, 0);
-		if (strncmp(Tempstr, "Cached:", 7)==0) val+=ParseHumanReadableDataQty(Tempstr+7, 0);
+		if (strncmp(Tempstr, "MemTotal:", 9)==0) total=FromMetric(Tempstr+9, 0);
+		if (strncmp(Tempstr, "MemFree:", 8)==0) val+=FromMetric(Tempstr+8, 0);
+		if (strncmp(Tempstr, "Buffers:", 8)==0) val+=FromMetric(Tempstr+8, 0);
+		if (strncmp(Tempstr, "Cached:", 7)==0) val+=FromMetric(Tempstr+7, 0);
 	Tempstr=STREAMReadLine(Tempstr, S);
 	}
 
@@ -81,13 +81,13 @@ if (S)
 	STREAMClose(S);
 }
 
-DestroyString(Tempstr);
+Destroy(Tempstr);
 
 return(val);
 }
 
 
-double GetRootFSUsage()
+static double GetRootFSUsage()
 {
 struct statvfs FSStat;
 
@@ -96,13 +96,13 @@ return(100.0 - (double) (FSStat.f_bavail * 100 / FSStat.f_blocks ));
 }
 
 
-char *GetCPUSpeed()
+static const char *GetCPUSpeed()
 {
 double MHz=0;
 char *Tempstr=NULL, *ptr;
 STREAM *S=NULL;
 
-S=STREAMOpenFile(CPUINFO_PATH, SF_RDONLY);
+S=STREAMOpen(CPUINFO_PATH, "r");
 if (S)
 {
 	Tempstr=STREAMReadLine(Tempstr, S);
@@ -125,15 +125,16 @@ if (S)
 	STREAMClose(S);
 }
 
-DestroyString(Tempstr);
+Destroy(Tempstr);
 
-return(GetHumanReadableDataQty(MHz,0));
+return(ToMetric(MHz,0));
 }
 
 
-int GetValueFromMMap(char *ValName, char **RetVal)
+static int GetValueFromMMap(char *ValName, char **RetVal)
 {
-char *Name=NULL, *ptr;
+char *Name=NULL;
+const char *ptr;
 int len=0;
 
 		if (! CrayonizerMMap) return(0);
@@ -144,7 +145,7 @@ int len=0;
 		ptr=GetNameValuePair(ptr, "\n","=",&Name, RetVal);
 		}
 
-DestroyString(Name);
+Destroy(Name);
 return(len);
 }
 
@@ -172,7 +173,7 @@ for (ptr=Text; *ptr != '\0'; ptr++)
 	switch (*ptr)
 	{
 		case '%': 
-			RetStr=AddCharToBuffer(RetStr,len++,'%'); 
+			RetStr=AddCharToStr(RetStr, '%'); 
 		break;
 
 		case 'c': 
@@ -322,7 +323,7 @@ for (ptr=Text; *ptr != '\0'; ptr++)
 	switch (Type)
 	{
 		case ENVTYPE_SCRIPT:
-		S=STREAMSpawnCommand(Name, COMMS_BY_PIPE | SPAWN_TRUST_COMMAND,"");
+		S=STREAMSpawnCommand(Name, "");
 		if (S)
 		{
 		Tempstr=STREAMReadLine(Tempstr, S);
@@ -334,7 +335,7 @@ for (ptr=Text; *ptr != '\0'; ptr++)
 		break;
 
 		case ENVTYPE_FILE:
-		S=STREAMOpenFile(Name, SF_RDONLY);
+		S=STREAMOpen(Name, "r");
 		if (S)
 		{
 		Tempstr=STREAMReadLine(Tempstr, S);
@@ -362,15 +363,15 @@ for (ptr=Text; *ptr != '\0'; ptr++)
 	}
 	break;
 
-	default: RetStr=AddCharToBuffer(RetStr,len++,*ptr); break;
+	default: RetStr=AddCharToStr(RetStr, *ptr); break;
 	}
 
 }
 
-if (len > MaxLen) RetStr[MaxLen]='\0';
+if (StrLen(RetStr) > MaxLen) StrTrunc(RetStr, len);
 
-DestroyString(Tempstr);
-DestroyString(Name);
+Destroy(Tempstr);
+Destroy(Name);
 
 return(RetStr);
 }

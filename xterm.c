@@ -22,7 +22,7 @@ result=StrLen(Tempstr);
 //result=read(0,Tempstr,100);
 if (result > 0)
 {
-	Tempstr[result]='\0';
+	StrTrunc(Tempstr, result);
 	ptr=Tempstr;
 	if (strncmp(ptr,"\x1b[",2)==0)
 	{
@@ -35,8 +35,8 @@ if (result > 0)
 	}
 }
 
-STREAMDisassociateFromFD(StdIn);
-DestroyString(Tempstr);
+STREAMDestroy(StdIn);
+Destroy(Tempstr);
 }
 
 
@@ -56,7 +56,7 @@ len=StrLen(Tempstr);
 if (len > 0)
 {
 	ptr=Tempstr+len-2;
-	if (strcmp(ptr,"\x1b\\")==0) *ptr='\0';
+	if (strcmp(ptr,"\x1b\\")==0) StrTrunc(Tempstr, ptr-Tempstr);;
 
 	ptr=Tempstr;
 	len=StrLen(ReplyStart);
@@ -64,8 +64,8 @@ if (len > 0)
 	if (StrValid(ptr)) RetStr=CopyStr(RetStr,ptr);
 }
 
-STREAMDisassociateFromFD(StdIn);
-DestroyString(Tempstr);
+STREAMDestroy(StdIn);
+Destroy(Tempstr);
 
 return(RetStr);
 }

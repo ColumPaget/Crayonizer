@@ -2,7 +2,7 @@
 
 //This handles ANSI sequences that start ESC[, these are 'Control Sequence Introducer' (CSI) codes 
 //Some of these we need to detect, because they clear the screen or such
-int EscapeSequenceCSI(char **text, char *end)
+static int EscapeSequenceCSI(char **text, char *end)
 {
 int val, AtEnd=FALSE;
 
@@ -54,6 +54,7 @@ int val, AtEnd=FALSE;
 		}
 	}
 
+
 	while (*text < end)
 	{
 	switch (**text)
@@ -83,6 +84,7 @@ int val, AtEnd=FALSE;
 		case ';':
 		break;
 
+
 		//if we hit escape or CTRLO we don't want to
 		//or normal AtEnd processiong, just return 
 		case '\x1b':
@@ -107,7 +109,7 @@ int val, AtEnd=FALSE;
 return(ES_PART);
 }
 
-int EscapeSequenceOSC(char **text, char *end)
+static int EscapeSequenceOSC(char **text, char *end)
 {
 char *text_start=NULL, *text_end=NULL;
 char *Str=NULL;
@@ -132,7 +134,7 @@ case '2':
 		{
 		Str=CopyStrLen(Str, text_start, text_end-text_start);
 		SetVar(Vars,"crayon_xtitle",Str);
-		DestroyString(Str);	
+		Destroy(Str);	
 		}
 		return(ES_STRIP);
 	}
@@ -156,17 +158,45 @@ int EscapeSequenceHandle(char **text, char *end)
 {
 char *ptr;
 
-if (**text==CTRLO)
+
+if (**text == CTRLO)
 {
-	(*text)++;
-	if (GlobalFlags & FLAG_STRIP_ANSI) return(ES_STRIP);
-	return(ES_OKAY);
+		(*text)++;
+		if (GlobalFlags & FLAG_STRIP_ANSI) return(ES_STRIP);
+		return(ES_OKAY);
 }
 
-//otherwise it must be escape
+
+//if not CTRLO it must be escape, step past it
 (*text)++;
-if (**text=='[') return(EscapeSequenceCSI(text, end));
-if (**text==']') return(EscapeSequenceOSC(text, end));
+
+switch (**text)
+{
+	case '0':
+	case '1':
+	case '2':
+	case '3':
+	case '4':
+	case '5':
+	case '6':
+	case '7':
+	case '8':
+	case '9':
+		(*text)++;
+		return(ES_OKAY);
+	break;
+
+	//no idea what this is
+	case '(':
+		(*text)++;
+		if (**text == '\0') return(ES_PART);
+		(*text)++;
+		return(ES_OKAY);
+	break;
+
+	case '[': return(EscapeSequenceCSI(text, end)); break;
+	case ']': return(EscapeSequenceOSC(text, end)); break;
+}
 
 for (ptr=*text; ptr < end; ptr++)
 {

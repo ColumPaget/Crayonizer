@@ -6,6 +6,6 @@
 
 void HandleSigwinch(STREAM *Pipe);
 void HandleSignal(int sig);
-void PropogateSignals(STREAM *Pipe);
+void PropagateSignals(STREAM *Pipe);
 
 #endif

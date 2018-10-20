@@ -653,7 +653,7 @@ LDFLAGS
 LIBS
 CPPFLAGS
 CPP'
-ac_subdirs_all='libUseful-2.6'
+ac_subdirs_all='libUseful'
 
 # Initialize some variables set by options.
 ac_init_help=
@@ -1861,7 +1861,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
-VERSION="0.0.8"
+VERSION="1.0"
 
 
 ac_aux_dir=
@@ -1895,7 +1895,7 @@ ac_configure="$SHELL $ac_aux_dir/configure"  # Please don't use this var.
 
 
 
-subdirs="$subdirs libUseful-2.6"
+subdirs="$subdirs libUseful"
 
 
 ac_ext=c

@@ -39,14 +39,17 @@ TCrayon *Action;
 
 TCrayon *StatusBarGetActive();
 void StatusBarCloseActive();
-int StatusBarHandleInput(STREAM *Out, char *Input, char *KeySym);
+int StatusBarHandleInput(STREAM *Out, const char *Input, const char *KeySym);
 void StatusBarParseSelection(STREAM *S, const char *Name);
-int InfoBar(TCrayon *Setup);
-int QueryBar(TCrayon *Setup);
-int SelectionBar(TCrayon *Setup);
 //TStatusBar *StatusBarCreate(int Type, int Attribs, const char *Text);
 void StatusBarDestroy(TStatusBar *);
 //TStatusBar *ParseStatusBar(const char *Data);
 int SetupStatusBars(TStatusBar *Top, TStatusBar *Bottom);
 void UpdateStatusBars(int ForceUpdate);
+
+int InfoBar(TCrayon *Setup);
+int QueryBar(TCrayon *Setup);
+int SelectionBar(TCrayon *Setup);
+int HistoryBar(ListNode *Items, TCrayon *Action);
+
 #endif

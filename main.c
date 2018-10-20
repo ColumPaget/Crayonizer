@@ -24,16 +24,19 @@
 #include "escape_sequences.h"
 #include "crayonizations.h"
 #include "config_file.h"
+#include "command_line.h"
 #include "status_bar.h"
 #include "timers.h"
 #include "xterm.h"
+#include "history.h"
 #include "help.h"
 #include <wait.h>
 
 #define NORM "\x1b[0m"
 #define CLRSCR "\x1b[2J\x1b[;H"
 
-char *Version="1.0";
+char *Version="2.0";
+char *ConfigPaths=NULL;
 int GlobalFlags=0;
 
 
@@ -41,89 +44,110 @@ int GlobalFlags=0;
 
 int ColorProgramOutput(STREAM *Pipe, ListNode *CrayonList)
 {
-	static char *Buffer=NULL;
-	static int BuffFill=0;
-	char *line_start, *start, *end, *ptr;
-	int result, len=0;
-	
+  static char *Buffer=NULL;
+  static int BuffFill=0;
+  char *line_start, *start, *end, *ptr;
+  int result, len=0;
+	char *Tempstr=NULL;
 
-	if (! Buffer) Buffer=(char *) calloc(1,4097);
-	result=STREAMReadBytes(Pipe,Buffer+BuffFill,4096-BuffFill);
+  if (! Buffer) Buffer=(char *) calloc(1,4097);
+  result=STREAMReadBytes(Pipe,Buffer+BuffFill,4096-BuffFill);
 
-	//Although we only read 'result' bytes, we already had 'BuffFill' bytes carried over
-	//from last time (we were halfway through an ascii sequence, and expect to have the
-	//rest of it in this read)
-	result+=BuffFill;
-	//if we fail to consume all the string, we will reset BuffFill, so here we zero it
-	BuffFill=0;
+  //Although we only read 'result' bytes, we already had 'BuffFill' bytes carried over
+  //from last time (we were halfway through an ascii sequence, and expect to have the
+  //rest of it in this read)
+  result+=BuffFill;
 
-	if (result < 1) return(STREAM_CLOSED);
 
-	Buffer[result]='\0';
-	line_start=Buffer;
-	end=Buffer+result;
-	ptr=line_start;
-	while (ptr < end)
-	{
-		start=ptr;
-		if ((*ptr == '\x1b') || (*ptr == CTRLO))
+  //if we fail to consume all the string, we will reset BuffFill to the remainder, so here we zero it
+  BuffFill=0;
+
+  if (result < 1) return(STREAM_CLOSED);
+
+  StrTrunc(Buffer, result);
+	//fprintf(stderr, "READ: [%s]\n", Buffer);
+
+  end=Buffer+result;
+  start=Buffer;
+  for (ptr=start; ptr < end; )
+  {
+		switch (*ptr)
 		{
-				switch (EscapeSequenceHandle(&ptr,end))
+			case '\x1b':
+			case CTRLO:
+				if (ptr > start) 
 				{
-					case ES_STRIP:
-						len=end-ptr;
-						memmove(start,ptr,len);
-						end=start+len;
-						ptr=start;
-					break;
-
-					case ES_PART:
-						//We have part of an ANSI sequence, with a bit missing
-						//So save this in 'buffer' and recall
-						BuffFill=end-start;
-						memmove(Buffer,start,BuffFill);
-						return(BuffFill);
-					break;
-
-					case ES_OKAY:
-  				if (ptr==end) Crayonize(Pipe, line_start,end-line_start,FALSE,CrayonList);
-					break;
+								Crayonize(Pipe, start, ptr-start, FALSE, CrayonList);
+				Tempstr=CopyStrLen(Tempstr, start, ptr - start);
+				//fprintf(stderr, "RN: [%s]\n", Tempstr);
+  
 				}
-		}
-		else //deal with normal text rather than escape sequence
-		{
-			while ((ptr < end) && (*ptr !='\n') && (*ptr != '\x1b') && (*ptr !=CTRLO)) ptr++;
-			if (*ptr=='\n') 
-			{
+				start=ptr;
+        switch (EscapeSequenceHandle(&ptr,end))
+        {
+          case ES_STRIP:
+          break;
+
+          case ES_PART:
+            //We have part of an ANSI sequence, with a bit missing. We are at the end of the sequence, so we move it to
+						//the start of the Buffer and set BuffFill to be the length of this part.
+            BuffFill=end-start;
+            memmove(Buffer,start,BuffFill);
+            return(BuffFill);
+          break;
+
+          case ES_OKAY:
+						Crayonize(Pipe, start, ptr-start, FALSE, CrayonList);
+						Tempstr=CopyStrLen(Tempstr, start, ptr-start);
+						//fprintf(stderr, "ESCOK: [%s]\n", Tempstr);
+						start=ptr;
+          break;
+        }
+			break;
+
+			case '\n':
+        ptr++;
+        Crayonize(Pipe, start, ptr - start, FALSE, CrayonList);
+				Tempstr=CopyStrLen(Tempstr, start, ptr - start);
+				//fprintf(stderr, "LN: [%s]\n", Tempstr);
+        LineNo++;
+				start=ptr;
+			break;
+
+			default:
 				ptr++;
-				Crayonize(Pipe, line_start,ptr-line_start,FALSE,CrayonList);
-				LineNo++;
-				line_start=ptr;
-			}
-      else if (ptr==end)  
-      {
-				if (GlobalFlags & FLAG_EXPECT_LINES)
-				{
-          BuffFill=ptr-start;
-          memmove(Buffer,start,BuffFill);
-					return(BuffFill);
-				}
-				else Crayonize(Pipe, line_start,end-line_start,FALSE,CrayonList);
-      }
+			break;
 		}
 	}
 
-	//By now, whatever happens, we'll have drawn our line, so if we need to 
-	//refresh status bars because we cleared the screen, then we do so here
-		if (GlobalFlags & FLAG_REDRAW)
-		{
-			UpdateStatusBars(TRUE);
-			GlobalFlags &= ~FLAG_REDRAW;	
-		}
 
-	//Don't do this, is static
-	//DestroyString(Buffer);
-	return(result);
+result=ptr - start;
+if (result > 0)
+{
+	if (GlobalFlags & FLAG_EXPECT_LINES)
+	{
+ 	  memmove(Buffer, start, result);
+		BuffFill=result;
+ 	  return(BuffFill);
+	}
+	else 
+	{
+		Crayonize(Pipe, start, result, FALSE, CrayonList);
+		//fprintf(stderr, "EN: [%s]\n", Tempstr);
+	}
+}
+
+//By now, whatever happens, we'll have drawn our line, so if we need to 
+//refresh status bars because we cleared the screen, then we do so here
+if (GlobalFlags & FLAG_REDRAW)
+{
+	UpdateStatusBars(TRUE);
+	GlobalFlags &= ~FLAG_REDRAW;	
+}
+
+//Don't do this, is static
+//Destroy(Buffer);
+return(BuffFill);
 }
 
 
@@ -171,69 +195,6 @@ free(Attribs);
 }	
 
 
-char *RebuildPath(char *RetStr, char *Path, const char *CrayonizerDir)
-{
-char *NewPath=NULL, *Token=NULL, *ptr;
-
-NewPath=CopyStr(RetStr,"");
-ptr=GetToken(Path,":",&Token,0);
-while (ptr)
-{
-  if (strcmp(Token,CrayonizerDir) !=0) NewPath=MCatStr(NewPath,Token,":",NULL);
-  ptr=GetToken(ptr,":",&Token,0);
-}
-
-DestroyString(Token);
-return(NewPath);
-}
-
-
-
-void ProcessCmdLine(char *CmdLine, ListNode *Crayons)
-{
-TCrayon *Item;
-ListNode *Curr;
-
-Curr=ListGetNext(Crayons);
-while (Curr)
-{
-	Item=(TCrayon *) Curr->Item;
-	if (Item->Type==CRAYON_CMDLINE)
-	{
-		 ColorSubstring(NULL, NULL, CmdLine, StrLen(CmdLine), Item);
-	}
-	Curr=ListGetNext(Curr);
-}
-
-}	
-
-
-char *RebuildCommandLine(char *RetStr, int argc, char *argv[], const char *CrayonizerDir)
-{
-char *CommandLine=NULL, *Tempstr=NULL, *ptr;
-int i;
-
-
-ptr=GetVar(Vars, "ReplaceCommand");
-if (StrLen(ptr)) return(CopyStr(RetStr,ptr));
-
-Tempstr=RebuildPath(Tempstr, getenv("PATH"), CrayonizerDir);
-CommandLine=RetStr;
-CommandLine=FindFileInPath(CommandLine, argv[0], Tempstr);
-CommandLine=MCatStr(CommandLine, " ",GetVar(Vars,"ExtraCmdLineOptions")," ",NULL);
-for (i=1; i < argc; i++)
-{
-	//Tempstr=QuoteCharsInStr(Tempstr,argv[i]," 	()");
-	//CommandLine=MCatStr(CommandLine,Tempstr," ",NULL);
-	CommandLine=MCatStr(CommandLine,"'",argv[i],"' ",NULL);
-}
-StripTrailingWhitespace(CommandLine);
-
-DestroyString(Tempstr);
-return(CommandLine);
-}
-
-
 
 
 
@@ -253,7 +214,7 @@ Crayon=(TCrayon *) Curr->Item;
 /*
 if (Crayon->Type==CRAYON_EXEC) 
 {
-	if (StrLen(Tempstr)) Tempstr=MCatStr(Tempstr,";",Crayon->Match,NULL);
+	if (StrValid(Tempstr)) Tempstr=MCatStr(Tempstr,";",Crayon->Match,NULL);
 	else Tempstr=CopyStr(Tempstr,Crayon->Match);
 }
 */
@@ -275,11 +236,11 @@ Tempstr=RebuildCommandLine(Tempstr,argc, argv, CrayonizerDir);
 if (GlobalFlags & FLAG_DONTCRAYON)
 {
 	//Exit after running the command
-	if (isatty(0)) ResetTTY(0);
+	TTYReset(0);
 	exit(system(Tempstr));
 }
 
-Pipe=STREAMSpawnCommand(Tempstr,COMMS_BY_PTY|SPAWN_TRUST_COMMAND|TTYFLAG_ECHO|TTYFLAG_CANON|TTYFLAG_CRLF|COMMS_COMBINE_STDERR,"");
+Pipe=STREAMSpawnCommand(Tempstr, "pty echo canon icrlf trust");
 signal(SIGTERM, HandleSignal);
 signal(SIGINT, HandleSignal);
 signal(SIGWINCH, HandleSignal);
@@ -287,7 +248,7 @@ signal(SIGWINCH, HandleSignal);
 //Set initial window size, as though we'd received a SIGWINCH
 HandleSigwinch(Pipe);
 
-DestroyString(Tempstr);
+Destroy(Tempstr);
 return(Pipe);
 }
 
@@ -295,7 +256,8 @@ return(Pipe);
 
 void LoadEnvironment()
 {
-char *Token=NULL, *ptr;
+char *Token=NULL;
+const char *ptr;
 int i;
 
 for (i=0; environ[i] !=NULL; i++)
@@ -304,7 +266,7 @@ ptr=GetToken(environ[i],"=",&Token,0);
 SetVar(Vars,Token,ptr);
 }
 
-DestroyString(Token);
+Destroy(Token);
 }
 
 
@@ -335,10 +297,11 @@ while (1)
     if (S==StdIn) result=KeypressProcess(StdIn,CommandPipe);
     else result=ColorProgramOutput(CommandPipe, CrayonList);
 
+		fflush(stdout);
     if (result == STREAM_CLOSED) break;
   }
   else UpdateStatusBars(FALSE);
-  PropogateSignals(CommandPipe);
+  PropagateSignals(CommandPipe);
 	ProcessTimers(CommandPipe);
 }
 }
@@ -360,15 +323,16 @@ for (i=0; i < argc; i++)
 }
 StripTrailingWhitespace(CmdLine);
 
-ConfigLoad(CmdLine, &CrayonizerDir, CrayonList);
-
-if (! StrLen(CrayonizerDir))
+if (ConfigLoad(CmdLine, ConfigPaths, &CrayonizerDir, CrayonList))
 {
+	if (! StrValid(CrayonizerDir))
+	{
 		printf("ERROR! You must specify 'CrayonizerDir' in Crayonizer Config File\n");
 		printf("Failure to do so can result in crayonizer calling itself resulting in\n");
 		printf("an infinite loop of crayonizer processes (forkbomb)\n");
 		printf("AND YOU DON'T WANT THAT!\n");
 		exit(1);
+	}
 }
 
 LoadEnvironment();
@@ -377,7 +341,7 @@ if (! ListSize(CrayonList)) GlobalFlags |=FLAG_DONTCRAYON;
 
 if (isatty(0))
 {
-	if (! (GlobalFlags & FLAG_DONTCRAYON)) InitTTY(0, 0,TTYFLAG_LFCR|TTYFLAG_IGNSIG);
+	if (! (GlobalFlags & FLAG_DONTCRAYON)) TTYConfig(0, 0,TTYFLAG_OUT_CRLF | TTYFLAG_IGNSIG | TTYFLAG_SAVE);
 	StdIn=STREAMFromFD(0);
 	STREAMSetTimeout(StdIn,10);
 	ListAddItem(Streams,StdIn);
@@ -409,12 +373,12 @@ ProcessAppends(CommandPipe,CrayonList,CRAYON_APPEND);
 ProcessAppends(CommandPipe,CrayonList,CRAYON_ONEXIT);
 
 STREAMClose(CommandPipe);
-STREAMDisassociateFromFD(StdIn);
+STREAMDestroy(StdIn);
 ListDestroy(Streams,NULL);
 ListDestroy(CrayonList,free);
-DestroyString(Tempstr);
-DestroyString(CmdLine);
-DestroyString(CrayonizerDir);
+Destroy(Tempstr);
+Destroy(CmdLine);
+Destroy(CrayonizerDir);
 }
 
 
@@ -427,7 +391,7 @@ int val, i;
 
 CrayonList=ListCreate();
 for (i=0; i < argc; i++) CmdLine=MCatStr(CmdLine,argv[i]," ",NULL);
-ConfigLoad(CmdLine, &CrayonizerDir, CrayonList);
+ConfigLoad(CmdLine, ConfigPaths, &CrayonizerDir, CrayonList);
 
 StdIn=STREAMFromFD(0);
 
@@ -439,19 +403,19 @@ LineNo++;
 Tempstr=STREAMReadLine(Tempstr,StdIn);
 }
 
-STREAMDisassociateFromFD(StdIn);
+STREAMDestroy(StdIn);
 ListDestroy(CrayonList,free);
-DestroyString(CrayonizerDir);
-DestroyString(CmdLine);
-DestroyString(Tempstr);
+Destroy(CrayonizerDir);
+Destroy(CmdLine);
+Destroy(Tempstr);
 }
 
 
 
 void CalledAsSelf(int argc, char *argv[])
 {
-const char *Args[]={"-v","-version","--version","-?","-h","-help","--help","-config-help","-pmatch-help","-stdin",NULL};
-typedef enum {ARG_V1, ARG_V2, ARG_V3, ARG_H1, ARG_H2, ARG_H3, ARG_H4, ARG_CONFIG_HELP, ARG_PMATCH_HELP, ARG_STDIN} TCmdArgs;
+const char *Args[]={"-v","-version","--version","-?","-h","-help","--help","-config-help","-pmatch-help","-stdin","-c",NULL};
+typedef enum {ARG_V1, ARG_V2, ARG_V3, ARG_H1, ARG_H2, ARG_H3, ARG_H4, ARG_CONFIG_HELP, ARG_PMATCH_HELP, ARG_STDIN, ARG_CONFIG_PATH} TCmdArgs;
 int i, val, new_argc=0;
 char **new_argv=NULL;
 
@@ -487,6 +451,10 @@ for (i=1; i < argc; i++)
 			CrayonizeSTDIN(argc, argv);
 		break;
 
+		case ARG_CONFIG_PATH:
+			ConfigPaths=CopyStr(ConfigPaths, argv[++i]);
+		break;
+
 		default:
 			new_argc++;
 			new_argv=(char **) realloc(new_argv,sizeof(char *) * new_argc);
@@ -510,7 +478,7 @@ int val;
 if (GlobalFlags & FLAG_RESTORE_XTITLE) 
 {
 	Tempstr=XTermReadValue(Tempstr, "\x1b[21;t", "\x1b]l");
-  if (StrLen(Tempstr)) SetVar(Vars,"crayon_old_xtitle",Tempstr);
+  if (StrValid(Tempstr)) SetVar(Vars,"crayon_old_xtitle",Tempstr);
 }
 
 ptr=getenv("CRAYONIZER");
@@ -518,7 +486,7 @@ if (ptr && (atoi(ptr) > 0)) GlobalFlags |= FLAG_DONTCRAYON;
 
 
 Tempstr=CopyStr(Tempstr,getenv("TERM"));
-if (StrLen(Tempstr)) SetVar(Vars,"TERM",Tempstr);
+if (StrValid(Tempstr)) SetVar(Vars,"TERM",Tempstr);
 
 if (strcmp(Tempstr,"linux")==0)
 {
@@ -538,12 +506,12 @@ else if (strncmp(Tempstr,"rxvt",4)==0)
 
 Tempstr=CopyStr(Tempstr,getenv("COLORFGBG"));
 
-if (StrLen(Tempstr)) 
+if (StrValid(Tempstr)) 
 {
 			ptr=strchr(Tempstr,';');
 			if (ptr) 
 			{
-				*ptr='\0';
+				StrTrunc(Tempstr, ptr-Tempstr);
 				ptr++;
 				SetVar(Vars,"COLORFG",Tempstr);
 
@@ -612,7 +580,7 @@ if (StrLen(Tempstr))
 			}
 }
 
-DestroyString(Tempstr);
+Destroy(Tempstr);
 }
 
 
@@ -626,10 +594,12 @@ cmdline_argv=argv;
 
 Streams=ListCreate();
 Vars=ListCreate();
+TypingHistoryActivate(10);
 
 time(&StartTime);
 CrayonizerGetEnvironment();
 GlobalFlags |= FLAG_FOCUSED;
+ConfigPaths=CopyStr(ConfigPaths, "'$(UserCrayonizerDir)/$(Command).conf','$(UserDir)/.crayonizer.conf','$(SystemCrayonizerDir)/$(Command).conf','$(SystemConfigDir)/crayonizer.conf','$(SystemCrayonizerDir)/crayonizer.conf'");
 
 if (strcmp(basename(argv[0]),"crayonizer")==0) CalledAsSelf(argc, argv);
 else 
@@ -638,5 +608,5 @@ else
 	argv[0]=ptr;
 	CrayonizeCommand(argc,argv);
 }
-if (isatty(0)) ResetTTY(0);
+TTYReset(0);
 }
