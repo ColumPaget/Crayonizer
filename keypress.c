@@ -334,6 +334,7 @@ if (result > 0)
 
   case 0x8: //shift-backspace
 		strncpy(*KeySym,"shift-backspace",MaxLen);
+		strncpy(*KeySym,"backspace",MaxLen);
   break;
 
   case 0x7F: //backspace

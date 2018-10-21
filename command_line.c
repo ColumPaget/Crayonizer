@@ -98,10 +98,8 @@ const char *ptr;
 int i;
 
 
-/*
 ptr=GetVar(Vars, "ReplaceCommand");
-if (StrValid(ptr)) return(CopyStr(RetStr,ptr));
-*/
+if (StrValid(ptr)) return(CopyStr(CommandLine, ptr));
 
 Path=RebuildPath(Path, getenv("PATH"), CrayonizerDir);
 Tempstr=FindFileInPath(Tempstr, argv[0], Path);

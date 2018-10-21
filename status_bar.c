@@ -258,7 +258,7 @@ char *ptr, *Tempstr=NULL, *DefaultStr=NULL;
 
 		if (SB->EditLen > SB->EditCursor)
 		{
-			ptr=SB->EditText+SB->EditCursor;
+			ptr=SB->EditText + SB->EditCursor;
 			RetStr=CatStrLen(RetStr, SB->EditText, ptr-SB->EditText);
 			Tempstr=FormatStr(Tempstr,"%s%c%s%s",ANSICode(ANSI_RED,0,ANSI_INVERSE),*ptr,NORM,DefaultStr);
 			RetStr=MCatStr(RetStr,Tempstr,ptr+1,NULL);
@@ -289,11 +289,8 @@ char *ANSI=NULL;
 	ANSI=MCatStr(ANSI, ANSICode(SB->Attribs & 0xFF, (SB->Attribs & 0xFF00) >> 8, SB->Attribs & 0xFF0000), NULL);
 	fputs(ANSI, stdout);
 
-	if (SB->Curr && (SB->Type==ACTION_HISTORYBAR)) SB->Text=CopyStr(SB->Text, SB->Curr->Item);
-
-	ANSI=SubstituteTextValues(ANSI, SB->Text, ScreenCols);
-
-	if (SB->Type==ACTION_QUERYBAR) ANSI=FormatStatusEditText(ANSI, SB);
+	if ( (SB->Type==ACTION_QUERYBAR) || (SB->Type==ACTION_HISTORYBAR) ) ANSI=FormatStatusEditText(ANSI, SB);
+	else ANSI=SubstituteTextValues(ANSI, SB->Text, ScreenCols);
 
 	//Clear to end of line
 	ANSI=MCatStr(ANSI, "\x1b[K", NORM, NULL);
@@ -353,6 +350,13 @@ return(0);
 }
 
 
+void EditBarSetText(TStatusBar *SB, const char *Text)
+{
+		SB->EditText=CopyStr(SB->EditText, Text);
+		SB->EditLen=StrLen(SB->EditText);
+		SB->EditCursor=SB->EditLen;
+}
+
 
 static void EditBarHandleInput(TStatusBar *SB, STREAM *Out, const char *Input, int Action)
 {
@@ -368,18 +372,14 @@ switch (Action)
 		else Node=ListGetPrev(SB->Curr);
 
 		if (Node) SB->Curr=Node;
-
-		if (SB->Curr) SB->EditText=CopyStr(SB->EditText, (char *) SB->Curr->Item);
-		SB->EditLen=StrLen(SB->EditText);
+		if (SB->Curr) EditBarSetText(SB, (const char *) SB->Curr->Item);
 	break;
 	
 	case SB_EDIT_NEXT:
 		Node=ListGetNext(SB->Curr);
 
 		if (Node) SB->Curr=Node;
-
-		if (SB->Curr) SB->EditText=CopyStr(SB->EditText, (char *) SB->Curr->Item);
-		SB->EditLen=StrLen(SB->EditText);
+		if (SB->Curr) EditBarSetText(SB, (const char *) SB->Curr->Item);
 	break;
 
 	case SB_EDIT_LEFT:
@@ -401,8 +401,7 @@ switch (Action)
 	break;
 
 	case SB_EDIT_CLEAR:
-		SB->EditText=CopyStr(SB->EditText,"");
-		SB->EditCursor=0;
+		EditBarSetText(SB, "");
 	break;
 
 	case SB_EDIT_BACKSPACE:
@@ -413,21 +412,15 @@ switch (Action)
 			ptr=SB->EditText+SB->EditCursor;
 			if (SB->EditCursor < SB->EditLen) memmove(ptr,ptr+1,StrLen(ptr+1)+1);
 			else StrTrunc(SB->EditText, ptr - SB->EditText);
+
 		}
 	break;
 
 	case SB_EDIT_ENTER:
 		StatusBarHide(SB);
-		if (SB->Type == ACTION_HISTORYBAR) 
-		{
-			SB->EditText=CopyStr(SB->EditText, SB->Text);	
-			SB->EditLen=StrLen(SB->EditText);	
-		}
-		else StatusBarAddHistory(SB, SB->EditText);
-
+		StatusBarAddHistory(SB, SB->EditText);
 		FunctionCall(Out, SB->FuncName, SB->EditText, SB->EditLen);
-		SB->EditText=CopyStr(SB->EditText,"");
-		SB->EditLen=0;
+		EditBarSetText(SB, "");
 	break;
 
 	default:
@@ -458,30 +451,31 @@ Destroy(Tempstr);
 
 int QueryBarHandleInput(TStatusBar *QB, STREAM *Out, const char *Input, const char *KeySym)
 {
-char *ptr;
+char *Tempstr=NULL, *FuncName=NULL;
 int len, Action, result=FALSE;
 
 Action=StatusBarParseKeySym(KeySym);
 
-
 switch (Action)
 {
 	case SB_EDIT_CLOSE:
-	StatusBarClose(QB);
-	result=TRUE;
+		StatusBarClose(QB);
+		result=TRUE;
 	break;
 
 	case SB_EDIT_ENTER:
-	EditBarHandleInput(QB, Out, Input, Action);
-	StatusBarClose(QB);
-	UpdateStatusBars(TRUE);
-	result=TRUE;
+		FuncName=CopyStr(FuncName, QB->FuncName);		
+		Tempstr=CopyStr(Tempstr, QB->EditText);	
+		StatusBarClose(QB);
+		FunctionCall(Out, FuncName, Tempstr, StrLen(Tempstr));
+		UpdateStatusBars(TRUE);
+		result=TRUE;
 	break;
 
 	default:
-	EditBarHandleInput(QB, Out, Input, Action);
-	DrawStatusBar(QB);
-	result=TRUE;
+		EditBarHandleInput(QB, Out, Input, Action);
+		DrawStatusBar(QB);
+		result=TRUE;
 	break;
 }
 
@@ -681,7 +675,7 @@ const char *ptr;
 int WinWidth;
 
 SB=StatusBarCreate(ACTION_SELECTBAR, Setup, "");
-SB->EditText=CopyStr(SB->EditText, Setup->String);
+EditBarSetText(SB, Setup->String);
 
 SB->Items=ListCreate();
 ptr=GetToken(Setup->Match," ",&Tempstr,0);
@@ -713,6 +707,7 @@ Curr=ListGetLast(Items);
 if (Curr)
 {
 HB=StatusBarCreate(ACTION_HISTORYBAR, Action, "%E ");
+EditBarSetText(HB, (const char *) Curr->Tag);
 if (! HB->Items) HB->Items=ListCreate();
 
 while (Curr)
