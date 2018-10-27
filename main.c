@@ -35,7 +35,7 @@
 #define NORM "\x1b[0m"
 #define CLRSCR "\x1b[2J\x1b[;H"
 
-char *Version="2.0";
+char *Version="2.1";
 char *ConfigPaths=NULL;
 int GlobalFlags=0;
 

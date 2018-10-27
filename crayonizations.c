@@ -6,43 +6,43 @@
 
 static void OutputLineWithAttributes(const char *Line, int *Attribs, int Len);
 
-static int HandleComparison(char *Op, const char *Compare, const char *CompareTo)
+static int HandleComparison(const char *Op, const char *Item, const char *Comparator)
 {
-char *ptr, *optr;
+char *ptr;
 int result=FALSE;
 
 if (! StrValid(Op)) return(FALSE);
-if (! StrValid(Compare)) return(FALSE);
-if (! StrValid(CompareTo)) return(FALSE);
-optr=Op;
-switch (*optr)
+if (! StrValid(Item)) return(FALSE);
+if (! StrValid(Comparator)) return(FALSE);
+switch (*Op)
 {
 			case '<':
-				if (*(optr+1) == '=') result=(atof(Compare) <= atof(CompareTo));
-				else result=(atof(Compare) < atof(CompareTo));
+				if (*(Op+1) == '=') result=(atof(Item) <= atof(Comparator));
+				else result=(atof(Item) < atof(Comparator));
 			break;
 
 			case '>':
-				if (*(optr+1) == '=') result=(atof(Compare) >= atof(CompareTo));
-				else result=(atof(Compare) > atof(CompareTo));
+				if (*(Op+1) == '=') result=(atof(Item) >= atof(Comparator));
+				else result=(atof(Item) > atof(Comparator));
 			break;
 
 			case '=':
-				result=pmatch(Compare, CompareTo, StrLen(CompareTo), NULL, 0);
+				result=pmatch(Comparator, Item, StrLen(Item), NULL, 0);
 				if (result > 0) result=TRUE;
 				else result=FALSE;
 			break;
 
 			case '!':
-				result=pmatch(Compare, CompareTo, StrLen(CompareTo), NULL, 0);
+				result=pmatch(Comparator, Item, StrLen(Item), NULL, 0);
 				if (result > 0) result=FALSE;
 				else result=TRUE;
 			break;
 
 			case '%':
-				if (atoi(Compare) % atoi(CompareTo) ==0) result=TRUE;
+				if (atoi(Item) % atoi(Comparator) ==0) result=TRUE;
 			break;
 }
+
 
 return(result);
 }
@@ -83,7 +83,7 @@ int result=FALSE, val, i;
 	Expr=SubstituteVarsInString(Expr,Crayon->Match,Vars,0);
 
 
-	ptr=GetToken(Expr,"\\S|\\M",&Token,GETTOKEN_QUOTES|GETTOKEN_MULTI_SEPARATORS|GETTOKEN_INCLUDE_SEPARATORS);
+	ptr=GetToken(Expr,"\\S",&Token,GETTOKEN_QUOTES|GETTOKEN_MULTI_SEPARATORS|GETTOKEN_INCLUDE_SEPARATORS);
 	while (ptr)
 	{
 		switch (*Token)
@@ -180,13 +180,20 @@ int result=FALSE, val, i;
 			case '=':
 			case '!':
 			case '%':
+				//we don't want to get a blank for the next value, so forward past any spaces
+				while(isspace(*ptr)) ptr++;
 				ptr=GetToken(ptr,"\\S",&Value,GETTOKEN_QUOTES);
 				result=HandleComparison(Token, PrevToken, Value);
 			break;
+			
+			case ' ':
+				StripTrailingWhitespace(Token);
+			break;
 		}
 
-		PrevToken=CopyStr(PrevToken,Token);
-		ptr=GetToken(ptr,"\\S|\\M",&Token,GETTOKEN_QUOTES|GETTOKEN_MULTI_SEPARATORS|GETTOKEN_INCLUDE_SEPARATORS);
+		if (StrValid(Token)) PrevToken=CopyStr(PrevToken,Token);
+
+		ptr=GetToken(ptr,"\\S",&Token,GETTOKEN_QUOTES|GETTOKEN_MULTI_SEPARATORS|GETTOKEN_INCLUDE_SEPARATORS);
 	}
 
 
@@ -474,7 +481,6 @@ TCrayon *StatusBar=NULL;
 			fputs(Tempstr, stdout);
 		break;
 
-		/*
 		case ACTION_SET_XTITLE: 
 			EnvName=SubstituteTextValues(EnvName, MatchStart, end-start);
 			StripTrailingWhitespace(EnvName);
@@ -494,7 +500,6 @@ TCrayon *StatusBar=NULL;
 			Tempstr=MCopyStr(Tempstr,"\x1b]2;", ptr, "\x07", NULL);
 			fputs(Tempstr, stdout);
 		break;
-		*/
 
 
 		case ACTION_SET_XICONNAME: 

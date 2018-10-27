@@ -125,6 +125,9 @@ static int pmatch_quot_analyze(char P_Char, char S_Char)
     case 'P':
         if (ispunct(S_Char)) result=MATCH_ONE;
         break;
+    case 'T':
+        if (! isspace(S_Char)) result=MATCH_ONE;
+        break;
     case 'X':
         if (isxdigit(S_Char)) result=MATCH_ONE;
         break;

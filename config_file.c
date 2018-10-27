@@ -564,7 +564,19 @@ TCrayon *Crayon=NULL;
 			{
 				ptr=GetToken(ptr, "\\S", &Token, GETTOKEN_QUOTES);
 				ptr=GetToken(ptr, "\\S", &Token2, GETTOKEN_QUOTES);
-				CommandLineAddSubstitution(Token, Token2);
+				CommandLineAddSubstitution(CMDLINE_SUB, Token, Token2);
+			}
+			else if (strcasecmp(Token,"cmdline-insert")==0) 
+			{
+				ptr=GetToken(ptr, "\\S", &Token, GETTOKEN_QUOTES);
+				ptr=GetToken(ptr, "\\S", &Token2, GETTOKEN_QUOTES);
+				CommandLineAddSubstitution(CMDLINE_INSERT, Token, Token2);
+			}
+			else if (strcasecmp(Token,"cmdline-append")==0) 
+			{
+				ptr=GetToken(ptr, "\\S", &Token, GETTOKEN_QUOTES);
+				ptr=GetToken(ptr, "\\S", &Token2, GETTOKEN_QUOTES);
+				CommandLineAddSubstitution(CMDLINE_APPEND, Token, Token2);
 			}
 			else if(strcmp(Token,"{")==0) 
 			{

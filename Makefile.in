@@ -60,7 +60,13 @@ clean:
 	@rm -rf autom4te.cache 
 
 install:
-	$(INSTALL) -d $(DESTDIR)$(bindir)
-	$(INSTALL) crayonizer $(DESTDIR)$(bindir)
+	-$(INSTALL) -d $(DESTDIR)$(bindir)
+	-$(INSTALL) crayonizer $(DESTDIR)$(bindir)
+	-$(INSTALL) -d $(DESTDIR)/etc/crayonizer.d
+	-cp examples/* $(DESTDIR)/etc/crayonizer.d
+	-$(INSTALL) -d $(DESTDIR)/$(prefix)/prebin
+	-for PROG in ssh sftp tcpdump nmap make ifconfig ping ; do ln -s $(DESTDIR)$(bindir)/crayonizer $(DESTDIR)/$(prefix)/prebin/$$PROG; done
+
+
 
 

@@ -132,7 +132,6 @@ int GetTokenFindSeparator(const char *Pattern, const char *String, const char **
             continue;
         }
 
-
         if (GetTokenSepMatch(Pattern,&start_ptr, &end_ptr, Flags))
         {
             *SepStart=start_ptr;
@@ -185,36 +184,6 @@ char **BuildMultiSeparators(const char *Pattern)
 }
 
 
-char *BuildMultiSepStarts(char **separators)
-{
-    char **ptr;
-    char *Starts=NULL;
-    int len=0;
-
-    ptr=separators;
-    while (*ptr != NULL)
-    {
-        Starts=AddCharToBuffer(Starts,len++,**ptr);
-        ptr++;
-    }
-
-		StrLenCacheAdd(Starts, len);
-    return(Starts);
-}
-
-void DestroyMultiSepStarts(char **separators)
-{
-    char **ptr;
-
-    ptr=separators;
-    while (*ptr !=NULL)
-    {
-        free(*ptr);
-        ptr++;
-    }
-    free(separators);
-}
-
 
 int GetTokenMultiSepMatch(char **Separators, const char **start_ptr, const char **end_ptr, int Flags)
 {
@@ -229,7 +198,7 @@ int GetTokenMultiSepMatch(char **Separators, const char **start_ptr, const char 
         sptr=*start_ptr;
         eptr=*end_ptr;
 
-        if (GetTokenSepMatch(*ptr, &sptr, &eptr, Flags))
+				if (GetTokenFindSeparator(*ptr, *start_ptr, &sptr, &eptr, Flags))
         {
             *start_ptr=sptr;
             *end_ptr=eptr;
@@ -238,64 +207,24 @@ int GetTokenMultiSepMatch(char **Separators, const char **start_ptr, const char 
         ptr++;
     }
 
-    *start_ptr=sptr;
-    *end_ptr=eptr;
+    *start_ptr=*end_ptr;
 
     return(FALSE);
 }
 
 
-//Searches through 'String' for a match of a Pattern
-int GetTokenFindMultiSeparator(char **Separators, const char *String, const char **SepStart, const char **SepEnd, int Flags)
-{
-    const char *start_ptr=NULL, *end_ptr=NULL;
-    char *starts=NULL;
-
-    starts=BuildMultiSepStarts(Separators);
-    start_ptr=String;
-
-    while (*start_ptr != '\0')
-    {
-        if ((*start_ptr=='\\') && (! (Flags & GETTOKEN_BACKSLASH)))
-        {
-            start_ptr++;
-            start_ptr++;
-            continue;
-        }
-
-        //must handle quotes here as we don't always go into 'GetTokenMultiSepMatch' because we want to
-        //maximize speed in a simple loop
-        if (
-            (Flags & GETTOKEN_HONOR_QUOTES) &&
-            ((*start_ptr=='"') || (*start_ptr=='\''))
-        ) start_ptr=traverse_quoted(start_ptr);
-
-        //for speed we check of this character matches any of the start characters of our multiple separators
-        else if (strchr(starts, *start_ptr) && GetTokenMultiSepMatch(Separators,&start_ptr, &end_ptr, Flags))
-        {
-            *SepStart=start_ptr;
-            *SepEnd=end_ptr;
-            if (starts) free(starts);
-            return(TRUE);
-        }
-
-        //this char didn't match, move onto the next
-        if ((*start_ptr) !='\0') start_ptr++;
-    }
-
-//We found nothing, set sep start to equal end of string
-    *SepStart=start_ptr;
-    *SepEnd=start_ptr;
-
-    if (starts) free(starts);
-    return(FALSE);
-}
 
 
 //Once we've found our token we need to do various cleanups and post processing on it
 const char *GetTokenPostProcess(const char *SearchStr, const char *SepStart, const char *SepEnd, char **Token, int Flags)
 {
     const char *sptr, *eptr;
+
+		if (! SepStart)
+		{
+			*Token=CopyStr(*Token, SearchStr);
+			return(SearchStr+StrLen(SearchStr));
+		}
 
     sptr=SearchStr;
     if (Flags & GETTOKEN_INCLUDE_SEP)
@@ -350,7 +279,8 @@ const char *GetTokenSeparators(const char *SearchStr, char **Separators, char **
     /* this is a safety measure so that there is always something in Token*/
     if (Token) *Token=CopyStr(*Token,"");
     if ((! Token) || StrEnd(SearchStr)) return(NULL);
-    GetTokenFindMultiSeparator(Separators, SearchStr, &SepStart, &SepEnd, Flags);
+		SepStart=SearchStr;
+		GetTokenMultiSepMatch(Separators, &SepStart, &SepEnd, Flags);
     return(GetTokenPostProcess(SearchStr, SepStart, SepEnd, Token, Flags));
 }
 
@@ -397,8 +327,8 @@ const char *GetToken(const char *SearchStr, const char *Separator, char **Token,
         if (Flags & GETTOKEN_MULTI_SEPARATORS)
         {
             separators=BuildMultiSeparators(Separator);
-            GetTokenFindMultiSeparator(separators, SearchStr, &SepStart, &SepEnd, Flags);
-            DestroyMultiSepStarts(separators);
+						SepStart=SearchStr;
+						GetTokenMultiSepMatch(separators, &SepStart, &SepEnd, Flags);
         }
         else GetTokenFindSeparator(Separator, SearchStr, &SepStart, &SepEnd, Flags);
     }

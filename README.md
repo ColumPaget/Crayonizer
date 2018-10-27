@@ -1,3 +1,23 @@
+
+SYNOSIS:
+========
+
+	Crayonizer is an application that modifies the output of other text programs. It can color in text, trigger events on certain text matches, handle or translate keypresses, rewrite the command-line, alter the xterm title or add info-bars or popup menu bars. Uses include:
+
+*) Coloring output of programs like make/gcc, ping, ifconfig, netstat, nmap, tcpdump, etc to make them more readable, informative, or just prettier.
+*) Adding z-modem support to ssh.
+*) Adding '-p <port>' and '-i <identity file>' options to sftp by rewriting the command-line before passing it to the program.
+*) Setting xterm title to hostname upon ssh-ing to a host
+*) Setting terminal background color upon to hostname upon ssh-ing to a particular host
+*) Extracting 'now playing' information from mpg123 or mplayer
+*) Adding 'typing history' bars to programs that lack this feature
+
+
+VERSION:
+========
+	2.1 
+
+
 AUTHOR:
 =======
 
@@ -16,19 +36,23 @@ DISCLAIMER:
   This is free software. It comes with no guarentees and I take no responsiblity if it makes your computer explode, opens a portal to the demon dimensions, or does anything at all.
 
 
-SYNOSIS:
-========
-
-	Crayonizer is an application that colors the output of command-line programs using ANSI escape codes. It can also use more advanced vt100/xterm control sequences do set xterm titlebars, selections, handle/translate keypresses and add popup menus, etc, etc. 
-
-VERSION:
-========
-	1.0 
-
 INSTALL:
 ========
 
-	SHOULD be as simple as './configure ; make; make install'. There are no library files, only a single 'crayonizer' executable, so you can copy that by hand to wherever you wish it to live. The default install is into a directory called '/usr/prebin'. This will need to be configured as the first directory in your path.
+	SHOULD be as simple as './configure ; make; make install'. There are no library files, only a single 'crayonizer' executable, so you can copy that by hand to wherever you wish it to live. The default install will put it in /usr/local/bin unless a different prefix is configured with 'configure --prefix=<prefix>'. The example config files in 'examples' will be copied to '/etc/crayonizer.d'/ and symbolic links will be set up in '/usr/local/prebin' so that just inserting that directory as the first in your path should start crayonizing certain programs. Apart from the programs set up by symbolic link there's a 'terminal.conf' config intended for use with terminals like xterm, aterm and rxvt. This can be used like so:
+
+```
+		xterm -e "crayonizer terminal"
+```
+
+and it will do things like add popup menus to xterm, but this will require configuring xterm to use 7-bit input so that it sends 'alt-' escape strings. This can be achieved by adding:
+
+```
+xTerm*eightBitInput: false
+XTerm.vt100.metaSendsEscape: true
+```
+
+to your .Xresources.
 
 USAGE:
 ======
@@ -65,7 +89,7 @@ HOW IT WORKS:
 ```
 
 
-	However, crayonizer is intended to be installed into a directory that is at the 'front' of the user's PATH. Symbolic links are then made in that directory that have the same name as a command that one wishes to crayonize, but which point to the crayonizer executable. So, if we installed crayonizer to /usr/prebin, then w set our PATH to be:
+	However, crayonizer is intended to be installed into a directory that is at the 'front' of the user's PATH. Symbolic links are then made in that directory that have the same name as a command that one wishes to crayonize, but which point to the crayonizer executable. So, if we installed crayonizer to /usr/prebin, then we set our PATH to be:
 
 ```
 	PATH=/usr/prebin:/usr/local/bin:/usr/bin:/bin
@@ -130,15 +154,12 @@ SETTINGS:
 
 ```
 		cmdline-sub <match> <substitution>
+		cmdline-insert <match> <substitution>
+		cmdline-append <match> <substitution>
 ```
 
-	Substitute patterns	on the command-line with other text. For example:
+	Substitute patterns	on the command-line with other text. See 'COMMAND LINE REWRITING' below.
 
-```
-		cmdline-sub " -p " " -oPort="
-```
-
-	This can substitute  " -p " (including the spaces) for " -oPort=". This would allow you to modify the sftp program to have a "-p" option. 
 
 ```
 		stripansi
@@ -165,8 +186,82 @@ SETTINGS:
 		Allow child processes to run crayonizers. By default a crayonizer process sets an environment variable to prevent running another copy of itself. This is to prevent cyclic loops of crayonizers spawning crayonizers. However, if, say, one is using crayonizer to add features to an xterm, then we'd want to be able to run crayonized subprobrams in the xterm. We'd still want any programs run in the xterm to be crayonized if they're been configured to be so. The AllowChildCrayon disables setting the environment variable, thus allowing crayonizer sub-processes to be run.
 
 
+
+COMMAND LINE REWRITING
+======================
+
+	Crayonizer can rewrite the command-line that is to be passed to the crayonzied program. Three commands are available.
+
+```
+		cmdline-insert <pattern> <substitution>
+		cmdline-append <pattern> <substitution>
+		cmdline-sub <pattern> <substitution>
+```
+
+`cmdline-sub` pattern-matches some text on the command-line and replaces it with 'substitution'. `cmdline-insert` does the same, but it replaces the text with a space, and then inserts 'substitution' into the command-line just after the program name. `cmdline-append` places the substitution at the end of the command-line, again leaving a space where the matched text was.
+
+`cmdline-insert` and `cmdline-append` can be used with a blank pattern, in which case they will insert or append the substitution without needing to match a string in the command-line. e.g.
+
+```
+		cmdline-insert "" " -g "
+```
+
+`cmdline-insert` and `cmdline-append` leave a space in place of the matched text to preserve the order of command-line arguments, and prevent arguments being 'squashed together'. `cmdline-sub` however allows you to squash two arguments together. To see why this is useful let's consider adding command-line options to the 'sftp' program.
+
+	'sftp' lacks the '-p' option for setting the port that people know from 'ssh', instead requiring the user to type '-oPort='. This is annoying. We can solve this with `cmdline-sub` like so:
+
+```
+		cmdline-sub ' -p ' ' -oPort='
+
+```
+
+	This will change the command-line
+
+```
+		sftp user@myhost.com -p 1022
+```	
+
+to
+
+
+```
+		sftp user@myhost.com -oPort=1022
+```
+
+	Unfortunately that's not the end of the matter. 'sftp' insists that options must come before the destination argument, so we need to use the `cmdline-insert` to move the option. This can be achieved using the $(match) variable, which converts to the value of the matched string. Thus:
+
+```
+		cmdline-insert " -p \D+ " "$(match)"
+		cmdline-sub " -p " "-oPort="
+```
+
+So, for a command-line like:
+
+```
+		sftp user@myhost.com -p 1022 -oIdentityFile=~/.ssh/id_rsa
+```
+
+`cmdline-insert` will rewrite it to 
+
+```
+		sftp -p 1022 user@myhost.com -oIdentityFile=~/.ssh/id_rsa
+```
+
+Leaving a space to ensure that '-oIdentityFile=~/.ssh/id_rsa' isn't joined to 'user@myhost.com' to make a single meaningless argument. Having moved the argument we now replace it with the 'cmdline-sub' argument, which rewrites the command-line to:
+
+```
+		sftp -oPort=1022 user@myhost.com -oIdentityFile=~/.ssh/id_rsa
+```
+
+Which finally gives us a command-line that sftp will accept. The '-oIdentityFile=' argument could be replaced by a '-i' argument in a simliar way.
+
+
+
+
 CRAYONIZATION LINES:
 ====================
+
+Crayonizations are settings that match the output of the target program, and take some action, for instance coloring in the matched string. 
 
 e.g. 
 
@@ -188,7 +283,7 @@ e.g.
 		}
 ```
 
-	In some situations you only want to crayonize output from a command if it has a certain argument. Thus:
+	In some situations you only want to crayonize output from a command if it has a certain argument. Thus to crayonize the 'cat' command if it has '/proc/cpuinfo' as an argument:
 
 ```
 		entry cat /proc/cpuinfo
@@ -200,7 +295,7 @@ e.g.
 		}
 ```
 
-	Will only crayonize the output of cat if it has one argument '/proc/cpuinfo'. If you want to crayonize cat, tail, and head of /proc/cpuinfo, try:
+If you want to crayonize cat, tail, and head of /proc/cpuinfo, try:
 
 ```
 		entry cat|tail|head /proc/cpuinfo
@@ -522,6 +617,7 @@ PMATCH PATTERN MATCHES:
 	\C:   Any printable character (as decided by the 'isprint' C library function)
 	\D:   Any decimal digit
 	\S:   Any whitespace character
+	\T:   'Text', any non-whitespace character
 	\P:   Any punctuation character
 	\X:   Any hexadecimal digit
 	\U:   Any uppercase alphabetic character
