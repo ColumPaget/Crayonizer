@@ -428,7 +428,7 @@ Crayonizer recognizes the following keys:
 	
 		escape home insert delete end up down left right pgup pgdn pause backspace newline return F1 F2 F3 F4 F5 F6 F7 F8 F9 F10 F11 F12 F13 F14 F15 menu F17 F18 F19 F20
 
-		these can be combined with the modifiers 'shift-' 'alt-' and 'ctrl-' e.g.	
+these can be combined with the modifiers 'shift-' 'alt-' and 'ctrl-' e.g.	
 
 ```
 			keypress menu call PopupMenu
