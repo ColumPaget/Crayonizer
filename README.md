@@ -68,9 +68,9 @@ USAGE
 	crayonizer <program path>	Run 'program' and crayonize it's output using matching entry in config file.
 ```
 
-	Normally, however, crayonizer will not be invoked under its own name, but invoked under the name of the program that it will run and crayonize.
+Normally, however, crayonizer will not be invoked under its own name, but invoked under the name of the program that it will run and crayonize.
 
-	Crayonizer has a lot of possible settings. The source distrbution comes with example config files in the 'examples' directory.
+Crayonizer has a lot of possible settings. The source distrbution comes with example config files in the 'examples' directory.
 
 
 HOW IT WORKS
