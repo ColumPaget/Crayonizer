@@ -1,5 +1,5 @@
 
-SYNOSIS:
+SYNOSIS
 ========
 
 	Crayonizer is an application that modifies the output of other text programs. It can color in text, trigger events on certain text matches, handle or translate keypresses, rewrite the command-line, alter the xterm title or add info-bars or popup menu bars. Uses include:
@@ -13,30 +13,30 @@ SYNOSIS:
 *) Adding 'typing history' bars to programs that lack this feature
 
 
-VERSION:
+VERSION
 ========
 	2.1 
 
 
-AUTHOR:
+AUTHOR
 =======
 
 	Crayonizer is (C) 2013 Colum Paget, libUseful is (C) 2009 Colum Paget. They are released under the GPL so you may do anything with them that the GPL allows.
 
 
-CONTACT:
+CONTACT
 ========
 
 	Email: colums.projects@gmail.com
 
 
-DISCLAIMER:
+DISCLAIMER
 ===========
 
   This is free software. It comes with no guarentees and I take no responsiblity if it makes your computer explode, opens a portal to the demon dimensions, or does anything at all.
 
 
-INSTALL:
+INSTALL
 ========
 
 	SHOULD be as simple as './configure ; make; make install'. There are no library files, only a single 'crayonizer' executable, so you can copy that by hand to wherever you wish it to live. The default install will put it in /usr/local/bin unless a different prefix is configured with 'configure --prefix=<prefix>'. The example config files in 'examples' will be copied to '/etc/crayonizer.d'/ and symbolic links will be set up in '/usr/local/prebin' so that just inserting that directory as the first in your path should start crayonizing certain programs. Apart from the programs set up by symbolic link there's a 'terminal.conf' config intended for use with terminals like xterm, aterm and rxvt. This can be used like so:
@@ -54,7 +54,7 @@ XTerm.vt100.metaSendsEscape: true
 
 to your .Xresources.
 
-USAGE:
+USAGE
 ======
 
 ```
@@ -73,7 +73,7 @@ USAGE:
 	Crayonizer has a lot of possible settings. The source distrbution comes with example config files in the 'examples' directory.
 
 
-HOW IT WORKS:
+HOW IT WORKS
 =============
 
 	Crayonizer reads instructions from /etc/crayonizer.conf or ~.crayonizer.conf, or /etc/crayonizer.d/<program name>.conf or ~/.crayonizer.d/<program name>.conf and uses them to color a program's output. You can run it against a program by:
@@ -110,7 +110,7 @@ and then create symbolic links in prebin:
 	Crayonizer now shells the original command, but this time as the crayonizer install directory is not included in the PATH, the 'real' executable will be found and run. Crayonize will read the output of this command, and 'crayonize' it, applying colors and other modifications. The details of which 'crayonizations' to apply to which text are provided in the 'entry' sections of the config file.
 
 
-CONFIG FILE:
+CONFIG FILE
 ============
 
 	Crayonizer uses a config file to configure its behavior. It will look for config files in the following order (where '~' means 'user home directory'):
@@ -129,7 +129,7 @@ CONFIG FILE:
 	The config file also contains 'entry' sections for each program that you want to crayonize. These contain either settings related to running/crayonizing the program, or 'crayonization' lines of the form '<action type> <pattern match> <crayonizations> 
 
 
-SETTINGS:
+SETTINGS
 =========
 
 	These change the behavior of crayonizer's interaction with the program that it's crayonizing. 
@@ -258,7 +258,7 @@ Which finally gives us a command-line that sftp will accept. The '-oIdentityFile
 
 
 
-CRAYONIZATION LINES:
+CRAYONIZATION LINES
 ====================
 
 Crayonizations are settings that match the output of the target program, and take some action, for instance coloring in the matched string. 
@@ -447,7 +447,7 @@ KEYPRESSES
 ```
 
 
-IF STATEMENTS:
+IF STATEMENTS
 ==============
 	
 	Crayonizer provides a crude form of 'if' statement. It has the form:
@@ -486,7 +486,7 @@ IF STATEMENTS:
 	Where '<value>' is either an environment variable in the form $(varname) or else is a string constant. The ! and = operators treat the values as strings, but the '<' and '>' values treat them as integers.
 
 
-CRAYONIZER ACTIONS:
+CRAYONIZER ACTIONS
 ===================
 
 	The currently recognized actions for crayonizer are:
@@ -588,7 +588,7 @@ The remaining commands relate to xterm compliant terminal emulators
 
 
 
-PMATCH PATTERN MATCHES:
+PMATCH PATTERN MATCHES
 =======================
 
 	Crayonizer uses it's own 'pmatch' system for pattern matches (I couldn't get my head around regular expressions). Pmatch is based on the 'fnmatch' and 'glob' style of wildcarding used by the unix shell, but with many more features. This system is 'non greedy', so it matches the shortest string that it can, not the longest like POSIX regular expressions. Pmatch recognizes the following tokens:

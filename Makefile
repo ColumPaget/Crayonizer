@@ -65,7 +65,7 @@ install:
 	-$(INSTALL) -d $(DESTDIR)/etc/crayonizer.d
 	-cp examples/* $(DESTDIR)/etc/crayonizer.d
 	-$(INSTALL) -d $(DESTDIR)/$(prefix)/prebin
-	-for PROG in ssh sftp tcpdump nmap make ifconfig ping ; do echo "[$$PROG]" ; ln -s $(DESTDIR)$(bindir)/crayonizer $(DESTDIR)/$(prefix)/prebin/$$PROG; done
+	-for PROG in ssh sftp tcpdump nmap make ifconfig ping ; do ln -s $(DESTDIR)$(bindir)/crayonizer $(DESTDIR)/$(prefix)/prebin/$$PROG; done
 
 
 
