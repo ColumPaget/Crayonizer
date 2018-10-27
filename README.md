@@ -208,7 +208,7 @@ Crayonizer can rewrite the command-line that is to be passed to the crayonzied p
 
 `cmdline-insert` and `cmdline-append` leave a space in place of the matched text to preserve the order of command-line arguments, and prevent arguments being 'squashed together'. `cmdline-sub` however allows you to squash two arguments together. To see why this is useful let's consider adding command-line options to the 'sftp' program.
 
-	'sftp' lacks the '-p' option for setting the port that people know from 'ssh', instead requiring the user to type '-oPort='. This is annoying. We can solve this with `cmdline-sub` like so:
+'sftp' lacks the '-p' option for setting the port that people know from 'ssh', instead requiring the user to type '-oPort='. This is annoying. We can solve this with `cmdline-sub` like so:
 
 ```
 		cmdline-sub ' -p ' ' -oPort='
