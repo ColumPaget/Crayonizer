@@ -4,13 +4,13 @@ SYNOSIS
 
 Crayonizer is an application that modifies the output of other text programs. It can color in text, trigger events on certain text matches, handle or translate keypresses, rewrite the command-line, alter the xterm title or add info-bars or popup menu bars. Uses include:
 
-*) Coloring output of programs like make/gcc, ping, ifconfig, netstat, nmap, tcpdump, etc to make them more readable, informative, or just prettier.
-*) Adding z-modem support to ssh.
-*) Adding '-p <port>' and '-i <identity file>' options to sftp by rewriting the command-line before passing it to the program.
-*) Setting xterm title to hostname upon ssh-ing to a host
-*) Setting terminal background color upon to hostname upon ssh-ing to a particular host
-*) Extracting 'now playing' information from mpg123 or mplayer
-*) Adding 'typing history' bars to programs that lack this feature
+* Coloring output of programs like make/gcc, ping, ifconfig, netstat, nmap, tcpdump, etc to make them more readable, informative, or just prettier.
+* Adding z-modem support to ssh.
+* Adding '-p <port>' and '-i <identity file>' options to sftp by rewriting the command-line before passing it to the program.
+* Setting xterm title to hostname upon ssh-ing to a host
+* Setting terminal background color upon to hostname upon ssh-ing to a particular host
+* Extracting 'now playing' information from mpg123 or mplayer
+* Adding 'typing history' bars to programs that lack this feature
 
 
 VERSION
