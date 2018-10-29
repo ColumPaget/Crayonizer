@@ -14,7 +14,7 @@ int KeypressFlags=0;
 
 
 //This parses a function-key string sent from keyboard
-static int ParseFunctionKey(char *KeySym, int MaxLen, char *ModName, char K1, char K2)
+static void ParseFunctionKey(char *KeySym, int MaxLen, char *ModName, char K1, char K2)
 {
 switch (K1)
 {

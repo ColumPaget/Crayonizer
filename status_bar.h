@@ -47,7 +47,7 @@ void StatusBarDestroy(TStatusBar *);
 int SetupStatusBars(TStatusBar *Top, TStatusBar *Bottom);
 void UpdateStatusBars(int ForceUpdate);
 
-int InfoBar(TCrayon *Setup);
+void InfoBar(TCrayon *Setup);
 int QueryBar(TCrayon *Setup);
 int SelectionBar(TCrayon *Setup);
 int HistoryBar(ListNode *Items, TCrayon *Action);

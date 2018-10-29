@@ -640,7 +640,7 @@ return(SB);
 
 
 
-int InfoBar(TCrayon *Action)
+void InfoBar(TCrayon *Action)
 {
 TStatusBar *QB;
 

@@ -1519,7 +1519,7 @@ char *TerminalBarMenu(char *RetStr, TERMBAR *TB, const char *ItemStr)
 
 
 
-int TerminalMenuDraw(STREAM *Term, ListNode *Options, int x, int y, int wid, int len)
+void TerminalMenuDraw(STREAM *Term, ListNode *Options, int x, int y, int wid, int len)
 {
 		ListNode *Curr;
 		char *p_Color=NULL;
