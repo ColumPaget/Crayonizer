@@ -649,7 +649,7 @@ return(FALSE);
 
 
 
-static int ProcessSubactions(STREAM *Pipe, int *AttribLine, const char *Line, int Len, char *MatchStart, char *MatchEnd, TCrayon *Crayon)
+static void ProcessSubactions(STREAM *Pipe, int *AttribLine, const char *Line, int Len, char *MatchStart, char *MatchEnd, TCrayon *Crayon)
 {
 int i;
 
