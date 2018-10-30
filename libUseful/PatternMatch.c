@@ -299,7 +299,7 @@ static int pmatch_repeat(const char **P_PtrPtr, const char **S_PtrPtr, const cha
 			while ( ((**P_PtrPtr) != '}') && ((**P_PtrPtr) != '\0') ) (*P_PtrPtr)++;
 			if ((**P_PtrPtr)=='\0') return(MATCH_FAIL);
 			Tempstr=CopyStrLen(Tempstr, ptr, *P_PtrPtr - ptr);
-			val=strtol(Tempstr, *ptr, 10);
+			val=strtol(Tempstr, &ptr, 10);
 		}
 
 		while (1)
