@@ -61,7 +61,7 @@ break;
 
 
 
-static int ParseModifiedKey(char *KeySym, int MaxLen, char *ModName, char Key)
+static void ParseModifiedKey(char *KeySym, int MaxLen, char *ModName, char Key)
 {
 
 	switch (Key)
