@@ -31,7 +31,6 @@ int RAWDATAAppend(RAWDATA *RD, const char *Data, const char *Encoding, int MaxBu
 RAWDATA *RAWDATACreate(const char *Data, const char *Encoding, int MaxBuffLen)
 {
     RAWDATA *Item;
-    int encode;
 
     Item=(RAWDATA *) calloc(1,sizeof(RAWDATA));
     if (StrValid(Data))
@@ -76,6 +75,8 @@ RAWDATA *RAWDATACopy(RAWDATA *RD, size_t offset, size_t len)
 
 int RAWDATAReadAt(RAWDATA *RD, STREAM *S, size_t offset, size_t size)
 {
+    int len;
+
     if (size==0) size=S->Size;
     if ((offset+size) > RD->BuffLen)
     {
@@ -89,8 +90,10 @@ int RAWDATAReadAt(RAWDATA *RD, STREAM *S, size_t offset, size_t size)
         RD->BuffLen=size;
     }
 
-    RD->DataLen=STREAMReadBytes(S, RD->Buffer, size);
-    return(RD->DataLen);
+    len=STREAMReadBytes(S, RD->Buffer+offset, size);
+    if (len > 0) offset+=len;
+    RD->DataLen=offset;
+    return(len);
 }
 
 

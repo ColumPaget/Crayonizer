@@ -6,49 +6,49 @@
 void HandleSigwinch(STREAM *Pipe)
 {
     struct winsize w;
-		char *Tempstr=NULL;
+    char *Tempstr=NULL;
 
     ioctl(0, TIOCGWINSZ, &w);
 
-		ScreenRows=w.ws_row;
-		ScreenCols=w.ws_col;
-		if (GlobalFlags & HAS_STATUSBAR) SetupStatusBars(NULL, NULL);
-		else
-		{
-//		w.ws_row--;	
+    ScreenRows=w.ws_row;
+    ScreenCols=w.ws_col;
+    if (GlobalFlags & HAS_STATUSBAR) SetupStatusBars(NULL, NULL);
+    else
+    {
+//		w.ws_row--;
 
-    if (Pipe) ioctl(Pipe->out_fd, TIOCSWINSZ, &w);
-		}
-		Destroy(Tempstr);
+        if (Pipe) ioctl(Pipe->out_fd, TIOCSWINSZ, &w);
+    }
+    Destroy(Tempstr);
 }
 
 
 void HandleSignal(int sig)
 {
-int wid, len;
+    int wid, len;
 
-if (sig==SIGWINCH) GlobalFlags |= GOT_SIGWINCH;
-if (sig==SIGTERM) GlobalFlags |= GOT_SIGTERM;
-if (sig==SIGINT) GlobalFlags |= GOT_SIGINT;
+    if (sig==SIGWINCH) GlobalFlags |= GOT_SIGWINCH;
+    if (sig==SIGTERM) GlobalFlags |= GOT_SIGTERM;
+    if (sig==SIGINT) GlobalFlags |= GOT_SIGINT;
 }
 
 
 
 void PropagateSignals(STREAM *Pipe)
 {
-int PeerPID;
+    int PeerPID;
 
-if (! Pipe) return;
+    if (! Pipe) return;
 
-PeerPID=atoi(STREAMGetValue(Pipe,"PeerPID"));
-if (GlobalFlags & GOT_SIGWINCH) 
-{
-	HandleSigwinch(Pipe);
-	//kill(PeerPID,SIGWINCH);
-}
+    PeerPID=atoi(STREAMGetValue(Pipe,"PeerPID"));
+    if (GlobalFlags & GOT_SIGWINCH)
+    {
+        HandleSigwinch(Pipe);
+        //kill(PeerPID,SIGWINCH);
+    }
 
-if (GlobalFlags & GOT_SIGTERM) kill(PeerPID,SIGTERM);
-if (GlobalFlags & GOT_SIGINT) kill(PeerPID,SIGINT);
-GlobalFlags &= ~(GOT_SIGWINCH | GOT_SIGTERM | GOT_SIGINT);
+    if (GlobalFlags & GOT_SIGTERM) kill(PeerPID,SIGTERM);
+    if (GlobalFlags & GOT_SIGINT) kill(PeerPID,SIGINT);
+    GlobalFlags &= ~(GOT_SIGWINCH | GOT_SIGTERM | GOT_SIGINT);
 }
 

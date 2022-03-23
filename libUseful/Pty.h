@@ -21,6 +21,7 @@ Copyright (c) 2015 Colum Paget <colums.projects@googlemail.com>
 #define TTYFLAG_OUT_CRLF 1048576   //change LineFeed to CarriageReturn-Linefeed on output
 #define TTYFLAG_NONBLOCK 2097152
 #define TTYFLAG_SAVE     4194304   //save attributes for later use with TTYReset
+#define COMMS_COMBINE_STDERR 8388608   //save attributes for later use with TTYReset
 
 #define STREAMConfigTTY(S,speed,flags) ((S && istty(S->in_fd)) ? TTYConfig(S->in_fd,speed,flags))
 #define STREAMResetTTY(S) ((S && istty(S->in_fd)) ? TTYReset(S->in_fd))
@@ -36,12 +37,23 @@ int TTYReset(int tty);
 //shutdown TTY (hangup line if phone)
 int TTYHangUp(int tty);
 
+void PTYSetGeometry(int pty, int wid, int high);
 
 //open a tty device (like /dev/ttyS0). Flags are as 'TTYFLAG_' #defines above
 int TTYOpen(const char *devname, int LineSpeed, int Flags);
 
+
+
 //change config of an already opened tty device. Flags are as 'TTYFLAG_' #defines above
 void TTYConfig(int tty, int LineSpeed, int Flags);
+
+//get config flags of an already opened tty device
+int TTYGetConfig(int tty);
+
+//change config of an already opened tty device. Flags are as 'TTYFLAG_' #defines above
+#define TTYSetConfig(tty,speed,flags) (TTYConfig((tty,(speed),(flags)))
+
+
 
 //TTYOpen except accepting text config, not flags. Intended for bindings to languages like lua that don't handle
 //bit-flags well. possible config text options are:
@@ -66,9 +78,15 @@ int TTYConfigOpen(const char *Dev, const char *Config);
 //Parse 'text config' into flags and speed
 int TTYParseConfig(const char *Config, int *Speed);
 
-//pty and tty are two ends of a PseudoTTY 'pipe'. This is a two-way pipe with all the properties (like line-speed, tty modes etc) of
-// a tty. I normally attach 'tty' to stdin and stdout of some process, and use 'pty' as the end I read/write from/to
-int PseudoTTYGrab(int *pty, int *tty, int Flags);
+//master and slave are two ends of a PseudoTTY 'pipe'. This is a two-way pipe with all the properties (like line-speed, tty modes etc) of
+// a tty. I normally attach 'slave' to stdin and stdout of some process, and use 'master' as the end I read/write from/to
+int PseudoTTYGrab(int *master, int *slave, int Flags);
+
+//turn tty local echo on or off
+void TTYSetEcho(int tty, int OnOrOff);
+
+//switch canonical (line editing) mode on or off
+void TTYSetCanonical(int tty, int OnOrOff);
 
 #ifdef __cplusplus
 }

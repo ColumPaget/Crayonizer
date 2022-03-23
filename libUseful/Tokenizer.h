@@ -106,12 +106,12 @@ see examples/Tokenizer.c for examples
 #define GETTOKEN_MULTI_SEP 1
 #define GETTOKEN_HONOR_QUOTES 2  //honor quotes but don't strip them
 #define GETTOKEN_STRIP_QUOTES 4  //strip quotes (but otherwise ignore)
-#define GETTOKEN_QUOTES 6  //honore and strip quotes
+#define GETTOKEN_QUOTES 6  //honor and strip quotes
 #define GETTOKEN_INCLUDE_SEPARATORS 8  //include separators as tokens
 #define GETTOKEN_INCLUDE_SEP 8
 #define GETTOKEN_APPEND_SEPARATORS 16 //append separators to previous token
 #define GETTOKEN_APPEND_SEP 16
-#define GETTOKEN_BACKSLASH  32
+#define GETTOKEN_BACKSLASH  32  //treat backslashes as normal characters, rather than a form of quoting
 #define GETTOKEN_STRIP_SPACE 64 //strip whitespace from start and end of token
 
 
@@ -120,10 +120,21 @@ see examples/Tokenizer.c for examples
 extern "C" {
 #endif
 
+//this is a function that converts a config string into flags for GETTOKEN. You wouldn't normally use this unless you have libUseful bound
+//to a language that struggles with passing bitmasks of flags (libUseful-lua uses this function)
+int GetTokenParseConfig(const char *Config);
+
+//this is the main 'GetToken' function. Given a Search string, and a delimiter, copy the next Token into 'Token' and return a pointer to the remaining string
 const char *GetToken(const char *SearchStr, const char *Delim, char **Token, int Flags);
+
+//for strings of the form "name1=value1 name2=value2" get the next name and value using the supplied delimiters
 const char *GetNameValuePair(const char *Input, const char *PairDelim, const char *NameValueDelim, char **Name, char **Value);
 
-int GetTokenParseConfig(const char *Config);
+
+//for strings of the form "name1=value1 name2=value2" get the value for the name/value pair named by 'SearchName'
+char *GetNameValue(char *RetStr, const char *Input, const char *PairDelim, const char *NameValueDelim, const char *SearchName);
+
+
 #ifdef __cplusplus
 }
 #endif
