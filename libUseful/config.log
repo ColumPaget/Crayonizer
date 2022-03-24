@@ -288,7 +288,7 @@ configure:3970: result: yes
 configure:3988: checking for htonll in -lc
 configure:4013: gcc -o conftest -g -O2   conftest.c -lc  -lc -lc -lc -lc -lc -lc -lc -lc  >&5
 /usr/lib/gcc/i486-pc-linux-gnu/11.2.0/../../../../i486-pc-linux-gnu/bin/ld: Dwarf Error: Can't find .debug_ranges section.
-/tmp/ccqaQeBp.o: In function `main':
+/tmp/cc4l3VM4.o: In function `main':
 conftest.c:(.text.startup+0x7): undefined reference to `htonll'
 collect2: error: ld returned 1 exit status
 configure:4013: $? = 1
@@ -338,7 +338,7 @@ configure:4022: result: no
 configure:4041: checking for ntohll in -lc
 configure:4066: gcc -o conftest -g -O2   conftest.c -lc  -lc -lc -lc -lc -lc -lc -lc -lc  >&5
 /usr/lib/gcc/i486-pc-linux-gnu/11.2.0/../../../../i486-pc-linux-gnu/bin/ld: Dwarf Error: Can't find .debug_ranges section.
-/tmp/ccaeLoVw.o: In function `main':
+/tmp/ccKx9OYa.o: In function `main':
 conftest.c:(.text.startup+0x7): undefined reference to `ntohll'
 collect2: error: ld returned 1 exit status
 configure:4066: $? = 1

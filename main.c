@@ -35,7 +35,7 @@
 #define NORM "\x1b[0m"
 #define CLRSCR "\x1b[2J\x1b[;H"
 
-char *Version="2.2";
+char *Version="2.3";
 char *ConfigPaths=NULL;
 int GlobalFlags=0;
 
@@ -587,7 +587,7 @@ void CrayonizerGetEnvironment()
 
 
 
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
     char *ptr;
 
@@ -611,4 +611,6 @@ main(int argc, char *argv[])
         CrayonizeCommand(argc,argv);
     }
     TTYReset(0);
+
+return(0);
 }
