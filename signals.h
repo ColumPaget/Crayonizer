@@ -7,5 +7,6 @@
 void HandleSigwinch(STREAM *Pipe);
 void HandleSignal(int sig);
 void PropagateSignals(STREAM *Pipe);
+void SetupSignals();
 
 #endif

@@ -1,0 +1,47 @@
+v2.4 (2024-01-23)
+-----------------
+  * fix long-standing issue with xterm query responses coming back from terminal
+  * set pty of crayonized command to be the controlling tty
+  * upgrade to libUseful-5
+  * support compiling against installed libuseful instead of bundled
+  * don't clobber installed /etc/crayonizer.d files when 'make install'
+
+v2.3 (2022-03-24)
+-----------------
+  * fix a couple of memory leaks
+  * Merge pull request #4 from jubalh/anotherreturntype
+  * Fix return type in keypress.c
+
+v2.2 (2018-10-30)
+-----------------
+  * more crayoned tcpdump. Bugfix for pmatch
+  * Merge pull request #2 from jubalh/master
+  * Some functions don't return any value but it is specified that they should. Redfine them as void.
+  * README.md changes to fit github markdown
+
+v2.1 (2018-10-27)
+-----------------
+  * Add command-line rewriting functions
+
+v2.0 (2018-10-21)
+-----------------
+  * Sound support removed. 
+  * History bar feature added. 
+  * New '+' match added to the 'pmatch' system. 
+  * Command-line rewrite support added.
+
+v1.0 (2016-09-11)
+-----------------
+  * Version 1.0. With keypresses, timers, many xterm effects and statusbars
+  * Added Xterm Selection crayonization
+  * changed approach to avoid crayonizer running itself. Now, instead of editing the 'CrayonizerDir' out of PATH it searches the path itself rather than letting the shell do it, thus allowing it to skip files with the same name as the executable that are in the crayonizer directory
+  * altered input timeouts to avoid confusing escape followed by a character with alt modifier applied to a key
+  * changed names for ColorLine and ColorMatches to represent more generic concepts being crayonizer (no longer just colorizing output lines)
+  * functions work again, added 'if focused' test
+  * expanded text substitutions for setxtitle
+  * added onexit and onstart events and xterm raise, lower, minimize maximize high and wide options
+  * added support for 'focus' and 'unfocus' events when pointer enters/leaves an xterm
+  * added support for per-program config files
+  * added 'in' operator for 'if' statments
+  * Added keypresses, improvements to handle crayonizing ssh, started work on 'status bars'
+  * Sebastien Millet's changes, string changes for 64 bit systems, beginning work on 'taskbars'

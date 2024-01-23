@@ -35,7 +35,7 @@
 #define NORM "\x1b[0m"
 #define CLRSCR "\x1b[2J\x1b[;H"
 
-char *Version="2.3";
+char *Version="2.4";
 char *ConfigPaths=NULL;
 int GlobalFlags=0;
 
@@ -65,7 +65,6 @@ int ColorProgramOutput(STREAM *Pipe, ListNode *CrayonList)
     if (result < 1) return(STREAM_CLOSED);
 
     StrTrunc(Buffer, result);
-    //fprintf(stderr, "READ: [%s]\n", Buffer);
 
     end=Buffer+result;
     start=Buffer;
@@ -79,8 +78,6 @@ int ColorProgramOutput(STREAM *Pipe, ListNode *CrayonList)
             {
                 Crayonize(Pipe, start, ptr-start, FALSE, CrayonList);
                 Tempstr=CopyStrLen(Tempstr, start, ptr - start);
-                //fprintf(stderr, "RN: [%s]\n", Tempstr);
-
             }
             start=ptr;
             switch (EscapeSequenceHandle(&ptr,end))
@@ -99,7 +96,6 @@ int ColorProgramOutput(STREAM *Pipe, ListNode *CrayonList)
             case ES_OKAY:
                 Crayonize(Pipe, start, ptr-start, FALSE, CrayonList);
                 Tempstr=CopyStrLen(Tempstr, start, ptr-start);
-                //fprintf(stderr, "ESCOK: [%s]\n", Tempstr);
                 start=ptr;
                 break;
             }
@@ -109,7 +105,6 @@ int ColorProgramOutput(STREAM *Pipe, ListNode *CrayonList)
             ptr++;
             Crayonize(Pipe, start, ptr - start, FALSE, CrayonList);
             Tempstr=CopyStrLen(Tempstr, start, ptr - start);
-            //fprintf(stderr, "LN: [%s]\n", Tempstr);
             LineNo++;
             start=ptr;
             break;
@@ -133,7 +128,6 @@ int ColorProgramOutput(STREAM *Pipe, ListNode *CrayonList)
         else
         {
             Crayonize(Pipe, start, result, FALSE, CrayonList);
-            //fprintf(stderr, "EN: [%s]\n", Tempstr);
         }
     }
 
@@ -242,10 +236,8 @@ STREAM *LaunchCommands(int argc, char *argv[], ListNode *Matches, const char *Cr
         exit(system(Tempstr));
     }
 
-    Pipe=STREAMSpawnCommand(Tempstr, "pty echo canon icrlf trust");
-    signal(SIGTERM, HandleSignal);
-    signal(SIGINT, HandleSignal);
-    signal(SIGWINCH, HandleSignal);
+    Pipe=STREAMSpawnCommand(Tempstr, "rw pty echo canon icrlf trust noshell, ctty");
+    SetupSignals();
 
 //Set initial window size, as though we'd received a SIGWINCH
     HandleSigwinch(Pipe);
@@ -296,7 +288,7 @@ void CrayonizerProcessInputs()
 
         if (S)
         {
-            if (S==StdIn) result=KeypressProcess(StdIn,CommandPipe);
+            if (S==StdIn) result=KeypressProcess(StdIn, CommandPipe);
             else result=ColorProgramOutput(CommandPipe, CrayonList);
 
             fflush(stdout);
@@ -343,7 +335,7 @@ void CrayonizeCommand(int argc, char *argv[])
 
     if (isatty(0))
     {
-        if (! (GlobalFlags & FLAG_DONTCRAYON)) TTYConfig(0, 0,TTYFLAG_OUT_CRLF | TTYFLAG_IGNSIG | TTYFLAG_SAVE);
+        if (! (GlobalFlags & FLAG_DONTCRAYON)) TTYConfig(0, 0, TTYFLAG_IGNSIG | TTYFLAG_OUT_CRLF | TTYFLAG_SAVE);
         StdIn=STREAMFromFD(0);
         STREAMSetTimeout(StdIn,10);
         ListAddItem(Streams,StdIn);
@@ -355,7 +347,7 @@ void CrayonizeCommand(int argc, char *argv[])
     if (GlobalFlags & HAS_FOCUS)
     {
         Tempstr=CopyStr(Tempstr,"\x1b[?1004;1043h");
-        write(1, Tempstr, StrLen(Tempstr));
+        result=write(1, Tempstr, StrLen(Tempstr));
     }
 
 //We do non-text 'onstart' items before text-output prepends

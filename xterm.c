@@ -15,7 +15,7 @@ void XTermReadCursorPos(int *x, int *y)
     STREAMSetTimeout(StdIn,100);
     STREAMFlush(StdIn);
     Tempstr=CopyStr(Tempstr,"\x1b[6n");
-    write(1,Tempstr,StrLen(Tempstr));
+    result=write(1,Tempstr,StrLen(Tempstr));
     Tempstr=STREAMReadToTerminator(Tempstr,StdIn,'R');
     result=StrLen(Tempstr);
 //Tempstr=SetStrLen(Tempstr,100);
@@ -50,7 +50,7 @@ char *XTermReadValue(char *RetStr, const char *Query, const char *ReplyStart)
     RetStr=CopyStr(RetStr, "");
     StdIn=STREAMFromFD(0);
     STREAMSetTimeout(StdIn,1);
-    write(1,Query,StrLen(Query));
+    len=write(1,Query,StrLen(Query));
     Tempstr=STREAMReadToTerminator(Tempstr,StdIn,'\\');
     len=StrLen(Tempstr);
     if (len > 0)

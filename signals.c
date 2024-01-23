@@ -3,6 +3,7 @@
 #include <signal.h>
 #include "status_bar.h"
 
+
 void HandleSigwinch(STREAM *Pipe)
 {
     struct winsize w;
@@ -29,6 +30,7 @@ void HandleSignal(int sig)
 
     if (sig==SIGWINCH) GlobalFlags |= GOT_SIGWINCH;
     if (sig==SIGTERM) GlobalFlags |= GOT_SIGTERM;
+    if (sig==SIGHUP) GlobalFlags |= GOT_SIGTERM;
     if (sig==SIGINT) GlobalFlags |= GOT_SIGINT;
 }
 
@@ -44,11 +46,21 @@ void PropagateSignals(STREAM *Pipe)
     if (GlobalFlags & GOT_SIGWINCH)
     {
         HandleSigwinch(Pipe);
-        //kill(PeerPID,SIGWINCH);
+        kill(PeerPID,SIGWINCH);
     }
 
     if (GlobalFlags & GOT_SIGTERM) kill(PeerPID,SIGTERM);
     if (GlobalFlags & GOT_SIGINT) kill(PeerPID,SIGINT);
     GlobalFlags &= ~(GOT_SIGWINCH | GOT_SIGTERM | GOT_SIGINT);
 }
+
+
+void SetupSignals()
+{
+    signal(SIGHUP, HandleSignal);
+    signal(SIGTERM, HandleSignal);
+    signal(SIGINT, HandleSignal);
+    signal(SIGWINCH, HandleSignal);
+}
+
 

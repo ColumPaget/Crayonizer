@@ -41,7 +41,7 @@ void StatusBarAdjustCursor(int *x, int *y)
 
 int SetScrollRegion(int TopMargin, int BottomMargin)
 {
-    int cursx=0, cursy=0;
+    int cursx=0, cursy=0, result;
     char *ANSI=NULL;
 
     ScrollAreaEnd=ScreenRows;
@@ -51,7 +51,7 @@ int SetScrollRegion(int TopMargin, int BottomMargin)
     StatusBarAdjustCursor(&cursx, &cursy);
 
     ANSI=FormatStr(ANSI,"\x1b[%d;%dr\x1b[%d;%dH",TopMargin+1,ScrollAreaEnd-1,cursy,cursx);
-    write(1,ANSI,StrLen(ANSI));
+    result=write(1,ANSI,StrLen(ANSI));
 
     Destroy(ANSI);
 
@@ -138,15 +138,15 @@ void UpdateStatusBars(int ForceUpdate)
 
 void StatusBarHide(TStatusBar *SB)
 {
-    int x=0, y=0;
+    int x=0, y=0, result;
     char *ANSI=NULL;
 
     XTermReadCursorPos(&x, &y);
 
     ANSI=FormatStr(ANSI,"\x1b[%d;0H%s\x1b[K",SB->pos,NORM);
-    write(1,ANSI,StrLen(ANSI));
+    result=write(1,ANSI,StrLen(ANSI));
     ANSI=FormatStr(ANSI,"\x1b[%d;%dH",y,x);
-    write(1,ANSI,StrLen(ANSI));
+    result=write(1,ANSI,StrLen(ANSI));
 
     Destroy(ANSI);
 }

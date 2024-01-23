@@ -333,7 +333,7 @@ static int pmatch_char(const char **P_PtrPtr, const char **S_PtrPtr, int *Flags)
     int result=MATCH_FAIL;
 
     P_Start=*P_PtrPtr;
-    if (*Flags & PMATCH_NOCASE)
+    if ((*Flags) & PMATCH_NOCASE)
     {
         P_Char=tolower(**P_PtrPtr);
         S_Char=tolower(**S_PtrPtr);
@@ -564,7 +564,7 @@ static int pmatch_search(const char **P_PtrPtr, const char **S_PtrPtr, const cha
 
 //any number of '*' at the end of the pattern don't count once we've run out of string
 //? however does, because '?' is saying 'one character' whereas '*' is zero or more
-while (**P_PtrPtr=='*') (*P_PtrPtr)++;
+    while (**P_PtrPtr=='*') (*P_PtrPtr)++;
 
 
 // if pattern not exhausted then we didn't get a match

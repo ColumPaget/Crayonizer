@@ -334,8 +334,7 @@ static void PassToProgram(STREAM *Pipe, const char *ActivateLine, const char *Pr
     Tempstr=SetStrLen(Tempstr,4096);
     STREAMFlush(Pipe);
 
-    if (StrLen(ActivateLine)) write(CmdS->out_fd,ActivateLine,StrLen(ActivateLine));
-//write(1,"\n",1);
+    if (StrLen(ActivateLine)) result=write(CmdS->out_fd,ActivateLine,StrLen(ActivateLine));
 
     while (1)
     {
@@ -347,14 +346,14 @@ static void PassToProgram(STREAM *Pipe, const char *ActivateLine, const char *Pr
             {
                 result=STREAMReadBytes(CmdS,Tempstr,4096);
                 if (result < 1) break;
-                write(Pipe->out_fd,Tempstr,result);
+                wrote=write(Pipe->out_fd,Tempstr,result);
             }
 
             if (S==CmdErr)
             {
                 result=STREAMReadBytes(CmdErr,Tempstr,4096);
                 if (result < 1) break;
-                fwrite(Tempstr,1, result, stdout);
+                wrote=fwrite(Tempstr,1, result, stdout);
             }
 
             if (S==Pipe)
