@@ -130,7 +130,7 @@ void PrintUsage()
     printf("	--help:		print this help\n");
     printf("	-config-help:	print config file help\n");
     printf("	-pmatch-help:	print 'pmatch' pattern match help\n\n");
-    printf("Crayonizer is copyright 2.33 Colum Paget\n");
+    printf("Crayonizer is copyright 2013 Colum Paget\n");
     printf("It is released under the GNU Public Licence\n");
     printf("Bug reports to: colums.projects@gmail.com\n");
 }

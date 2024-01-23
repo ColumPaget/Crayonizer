@@ -207,8 +207,8 @@ configure:3913: $? = 0
 configure:3913: result: yes
 configure:3919: checking for htonll
 configure:3919: gcc -o conftest -g -O2   conftest.c -lc  >&5
-/usr/bin/ld: /tmp/cc5eOUZA.o: in function `main':
-/home/colum/work/Crayonizer/libUseful/conftest.c:57: undefined reference to `htonll'
+/usr/bin/ld: /tmp/ccwXShFr.o: in function `main':
+/tmp/Crayonizer/libUseful/conftest.c:57: undefined reference to `htonll'
 collect2: error: ld returned 1 exit status
 configure:3919: $? = 1
 configure: failed program was:
@@ -275,8 +275,8 @@ configure: failed program was:
 configure:3919: result: no
 configure:3925: checking for ntohll
 configure:3925: gcc -o conftest -g -O2   conftest.c -lc  >&5
-/usr/bin/ld: /tmp/ccFgAlRy.o: in function `main':
-/home/colum/work/Crayonizer/libUseful/conftest.c:57: undefined reference to `ntohll'
+/usr/bin/ld: /tmp/cc8Qy9hY.o: in function `main':
+/tmp/Crayonizer/libUseful/conftest.c:57: undefined reference to `ntohll'
 collect2: error: ld returned 1 exit status
 configure:3925: $? = 1
 configure: failed program was:

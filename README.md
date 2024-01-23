@@ -15,7 +15,7 @@ Crayonizer is an application that modifies the output of other text programs. It
 
 VERSION
 ========
-2.1 
+2.4 
 
 
 AUTHOR

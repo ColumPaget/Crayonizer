@@ -414,7 +414,8 @@ void CalledAsSelf(int argc, char *argv[])
     char **new_argv=NULL;
 
 
-    for (i=1; i < argc; i++)
+    if (argc < 2) PrintUsage();
+    else for (i=1; i < argc; i++)
     {
         val=MatchTokenFromList(argv[i],Args,0);
 
