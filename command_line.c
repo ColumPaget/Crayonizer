@@ -38,7 +38,9 @@ static char *CommandLineSubstituteItem(char *RetStr, int SubsType, const char *I
     //Tempstr now holds the text to substitute into the command-line
     Tempstr=SubstituteVarsInString(Tempstr, Substitute, Vars, 0);
 
-
+		//only process if we found a match
+		if (MatchStart)
+		{
     switch (SubsType)
     {
     //replace matching text with the substitution
@@ -81,6 +83,7 @@ static char *CommandLineSubstituteItem(char *RetStr, int SubsType, const char *I
         RetStr=CatStr(RetStr, Tempstr);
         break;
     }
+		}
 
     Destroy(Tempstr);
     return(RetStr);
