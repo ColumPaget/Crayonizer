@@ -706,6 +706,9 @@ ac_subst_files=''
 ac_user_opts='
 enable_option_checking
 enable_largefile
+enable_fortify
+enable_stack_protect
+enable_harden
 with_libuseful
 '
       ac_precious_vars='build_alias
@@ -1333,6 +1336,9 @@ Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --disable-largefile     omit support for large files
+  --enable-fortify            use 'FORTIFY_SOURCE=3' to harden source code
+  --enable-stack-protect      use '-fstack-protector-strong' to harden source code
+  --enable-harden             use 'FORTIFY_SOURCE=3' and stack-protect to harden source code
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -3838,6 +3844,53 @@ esac
 rm -rf conftest*
   fi
 fi
+
+
+
+# Check whether --enable-fortify was given.
+if test ${enable_fortify+y}
+then :
+  enableval=$enable_fortify; cf_use_fortify=$enableval
+else $as_nop
+  cf_use_fortify=no
+fi
+
+# Check whether --enable-stack-protect was given.
+if test ${enable_stack_protect+y}
+then :
+  enableval=$enable_stack_protect; cf_use_stackprotect=$enableval
+else $as_nop
+  cf_use_stackprotect=no
+fi
+
+# Check whether --enable-harden was given.
+if test ${enable_harden+y}
+then :
+  enableval=$enable_harden; cf_use_harden=$enableval
+else $as_nop
+  cf_use_harden=no
+fi
+
+
+
+
+if test "$cf_use_harden" = "yes"
+then
+cf_use_fortify="yes"
+cf_use_stackprotect="yes"
+fi
+
+
+if test "$cf_use_fortify" = "yes"
+then
+CFLAGS="$CFLAGS -O2 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3"
+fi
+
+if test "$cf_use_stackprotect" = "yes"
+then
+CFLAGS="$CFLAGS -fstack-protector-strong"
+fi
+
 
 
 

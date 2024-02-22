@@ -35,7 +35,7 @@
 #define NORM "\x1b[0m"
 #define CLRSCR "\x1b[2J\x1b[;H"
 
-char *Version="2.4";
+char *Version="2.5";
 char *ConfigPaths=NULL;
 int GlobalFlags=0;
 
@@ -298,6 +298,8 @@ void CrayonizerProcessInputs()
         PropagateSignals(CommandPipe);
         ProcessTimers(CommandPipe);
     }
+
+   PropagateSignals(CommandPipe);
 }
 
 
@@ -359,7 +361,16 @@ void CrayonizeCommand(int argc, char *argv[])
     ListAddItem(Streams,CommandPipe);
 
     CrayonizerProcessInputs(Streams);
-    wait(&val);
+
+    //waitpid with WNOHANG will return 0 if there are children still running
+    //the pid of a child if it exits
+    //or -1 on any error (which includes there being no child processes)
+    //so we keep waiting and processing any signals we get until there are no children
+    while (waitpid(-1, NULL, WNOHANG) > -1)
+    {
+    usleep(10000); //sleep 10 ms
+    PropagateSignals(CommandPipe);
+    }
 
     SetDurationVariable();
 

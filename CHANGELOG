@@ -1,3 +1,7 @@
+v2.5 (2024-02-22)
+  * deal with race condition where we wait for child process to exit before we've sent it SIGTERM, causing a hung process
+  * add --enable-fortify --enable-stack-protect and --enable-harden to ./configure
+
 v2.4 (2024-01-23)
 -----------------
   * fix long-standing issue with xterm query responses coming back from terminal

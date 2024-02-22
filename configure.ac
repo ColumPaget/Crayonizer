@@ -12,6 +12,32 @@ AC_PROG_EGREP
 AC_SYS_LARGEFILE
 
 
+AC_ARG_ENABLE(fortify, [  --enable-fortify            use 'FORTIFY_SOURCE=3' to harden source code], cf_use_fortify=$enableval, cf_use_fortify=no )
+AC_ARG_ENABLE(stack-protect, [  --enable-stack-protect      use '-fstack-protector-strong' to harden source code], cf_use_stackprotect=$enableval, cf_use_stackprotect=no )
+AC_ARG_ENABLE(harden, [  --enable-harden             use 'FORTIFY_SOURCE=3' and stack-protect to harden source code], cf_use_harden=$enableval, cf_use_harden=no )
+
+
+
+if test "$cf_use_harden" = "yes"
+then
+cf_use_fortify="yes"
+cf_use_stackprotect="yes"
+fi
+
+
+if test "$cf_use_fortify" = "yes"
+then
+CFLAGS="$CFLAGS -O2 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3"
+fi
+
+if test "$cf_use_stackprotect" = "yes"
+then
+CFLAGS="$CFLAGS -fstack-protector-strong"
+fi
+
+
+
+
 AC_ARG_WITH(libuseful, [  --with-libuseful              use system-wide libUseful (default=auto) ], cf_system_libuseful=$withval )
 
 dnl These libraries are required by libuseful. We only really need them if static linking, but

@@ -649,6 +649,7 @@ ac_subst_vars='LTLIBOBJS
 LIBOBJS
 SIMD_CFLAGS
 CPP
+SONAME_FLAGS
 EGREP
 GREP
 SET_MAKE
@@ -702,12 +703,18 @@ ac_subst_files=''
 ac_user_opts='
 enable_option_checking
 enable_largefile
+enable_wall
+enable_werror
+enable_fortify
+enable_stack_protect
+enable_harden
+enable_soname
 enable_sendfile
 enable_ip6
 enable_xattr
 enable_namespaces
-enable_zlib
 enable_ssl
+enable_zlib
 enable_simd
 enable_capabilities
 '
@@ -1337,12 +1344,18 @@ Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --disable-largefile     omit support for large files
-  --enable-sendfile       enable 'fastcopy' sendfile support
-  --enable-ip6       enable IPv6 support
-  --enable-xattr       enable filesystem xattr support
-  --enable-namespaces       enable linux namespace support
-  --enable-zlib       use ZLib Compression
-  --enable-ssl       use Secure Sockets Layer
+  --enable-wall               use -Wall to get maximum compile warnings
+  --enable-werror             treat compile warnings as errors
+  --enable-fortify            use 'FORTIFY_SOURCE=3' to harden source code
+  --enable-stack-protect      use '-fstack-protector-strong' to harden source code
+  --enable-harden             use 'FORTIFY_SOURCE=3' and stack-protect to harden source code
+  --enable-soname             use 'soname' in shared lib. Defaults to 'yes' for gcc 'no' otherwise
+  --enable-sendfile           enable 'fastcopy' sendfile support
+  --enable-ip6                enable IPv6 support
+  --enable-xattr              enable filesystem xattr support
+  --enable-namespaces         enable linux namespace support
+  --enable-ssl                use Secure Sockets Layer
+  --enable-zlib               use ZLib Compression
   --enable-simd=<level>       use SIMD cpu extensions, 'level' can be one of mmx, sse, sse2
   --enable-capabilities       enable linux capabilities support (default=no)
 
@@ -1476,39 +1489,6 @@ fi
 
 } # ac_fn_c_try_compile
 
-# ac_fn_c_check_header_compile LINENO HEADER VAR INCLUDES
-# -------------------------------------------------------
-# Tests whether HEADER exists and can be compiled using the include files in
-# INCLUDES, setting the cache variable VAR accordingly.
-ac_fn_c_check_header_compile ()
-{
-  as_lineno=${as_lineno-"$1"} as_lineno_stack=as_lineno_stack=$as_lineno_stack
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $2" >&5
-printf %s "checking for $2... " >&6; }
-if eval test \${$3+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-$4
-#include <$2>
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"
-then :
-  eval "$3=yes"
-else $as_nop
-  eval "$3=no"
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
-fi
-eval ac_res=\$$3
-	       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
-printf "%s\n" "$ac_res" >&6; }
-  eval $as_lineno_stack; ${as_lineno_stack:+:} unset as_lineno
-
-} # ac_fn_c_check_header_compile
-
 # ac_fn_c_try_link LINENO
 # -----------------------
 # Try to link conftest.$ac_ext, and return whether this succeeded.
@@ -1617,6 +1597,39 @@ printf "%s\n" "$ac_res" >&6; }
   eval $as_lineno_stack; ${as_lineno_stack:+:} unset as_lineno
 
 } # ac_fn_c_check_func
+
+# ac_fn_c_check_header_compile LINENO HEADER VAR INCLUDES
+# -------------------------------------------------------
+# Tests whether HEADER exists and can be compiled using the include files in
+# INCLUDES, setting the cache variable VAR accordingly.
+ac_fn_c_check_header_compile ()
+{
+  as_lineno=${as_lineno-"$1"} as_lineno_stack=as_lineno_stack=$as_lineno_stack
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $2" >&5
+printf %s "checking for $2... " >&6; }
+if eval test \${$3+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+$4
+#include <$2>
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"
+then :
+  eval "$3=yes"
+else $as_nop
+  eval "$3=no"
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+fi
+eval ac_res=\$$3
+	       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+printf "%s\n" "$ac_res" >&6; }
+  eval $as_lineno_stack; ${as_lineno_stack:+:} unset as_lineno
+
+} # ac_fn_c_check_header_compile
 
 # ac_fn_check_decl LINENO SYMBOL VAR INCLUDES EXTRA-OPTIONS FLAG-VAR
 # ------------------------------------------------------------------
@@ -3422,36 +3435,6 @@ printf "%s\n" "no" >&6; }
   SET_MAKE="MAKE=${MAKE-make}"
 fi
 
-
-ac_header= ac_cache=
-for ac_item in $ac_header_c_list
-do
-  if test $ac_cache; then
-    ac_fn_c_check_header_compile "$LINENO" $ac_header ac_cv_header_$ac_cache "$ac_includes_default"
-    if eval test \"x\$ac_cv_header_$ac_cache\" = xyes; then
-      printf "%s\n" "#define $ac_item 1" >> confdefs.h
-    fi
-    ac_header= ac_cache=
-  elif test $ac_header; then
-    ac_cache=$ac_item
-  else
-    ac_header=$ac_item
-  fi
-done
-
-
-
-
-
-
-
-
-if test $ac_cv_header_stdlib_h = yes && test $ac_cv_header_string_h = yes
-then :
-
-printf "%s\n" "#define STDC_HEADERS 1" >>confdefs.h
-
-fi
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for grep that handles long lines and -e" >&5
 printf %s "checking for grep that handles long lines and -e... " >&6; }
 if test ${ac_cv_path_GREP+y}
@@ -3810,6 +3793,103 @@ cf_use_xattr=no
 
 cf_use_hashopenssl=auto
 
+# Check whether --enable-wall was given.
+if test ${enable_wall+y}
+then :
+  enableval=$enable_wall; cf_use_wall=$enableval
+else $as_nop
+  cf_use_wall=no
+fi
+
+if test "$cf_use_wall" = "yes"
+then
+CFLAGS="$CFLAGS -Wall"
+fi
+
+
+# Check whether --enable-werror was given.
+if test ${enable_werror+y}
+then :
+  enableval=$enable_werror; cf_use_werror=$enableval
+else $as_nop
+  cf_use_werror=no
+fi
+
+if test "$cf_use_werror" = "yes"
+then
+CFLAGS="$CFLAGS -Werror"
+fi
+
+
+# Check whether --enable-fortify was given.
+if test ${enable_fortify+y}
+then :
+  enableval=$enable_fortify; cf_use_fortify=$enableval
+else $as_nop
+  cf_use_fortify=no
+fi
+
+# Check whether --enable-stack-protect was given.
+if test ${enable_stack_protect+y}
+then :
+  enableval=$enable_stack_protect; cf_use_stackprotect=$enableval
+else $as_nop
+  cf_use_stackprotect=no
+fi
+
+# Check whether --enable-harden was given.
+if test ${enable_harden+y}
+then :
+  enableval=$enable_harden; cf_use_harden=$enableval
+else $as_nop
+  cf_use_harden=no
+fi
+
+# Check whether --enable-soname was given.
+if test ${enable_soname+y}
+then :
+  enableval=$enable_soname; cf_use_soname=$enableval
+else $as_nop
+  cf_use_soname=gcc
+fi
+
+
+SONAME_FLAGS=""
+
+if test "$cf_use_soname" != "no"
+then
+  if test "$GCC" = "yes"
+  then
+        SONAME_FLAGS='-Wl,-soname,${SONAME}'
+
+  else
+      if test "$cf_use_soname" = "yes"
+      then
+        SONAME_FLAGS='-Wl,-soname,${SONAME}'
+
+      fi
+  fi
+fi
+
+
+if test "$cf_use_harden" = "yes"
+then
+cf_use_fortify="yes"
+cf_use_stackprotect="yes"
+fi
+
+
+if test "$cf_use_fortify" = "yes"
+then
+CFLAGS="$CFLAGS -O2 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3"
+fi
+
+if test "$cf_use_stackprotect" = "yes"
+then
+CFLAGS="$CFLAGS -fstack-protector-strong"
+fi
+
+
 
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for get_current_dir_name in -lc" >&5
 printf %s "checking for get_current_dir_name in -lc... " >&6; }
@@ -3969,9 +4049,37 @@ else $as_nop
   cf_use_sendfile=auto
 fi
 
-
 if test "$cf_use_sendfile" != "no"
 then
+ac_header= ac_cache=
+for ac_item in $ac_header_c_list
+do
+  if test $ac_cache; then
+    ac_fn_c_check_header_compile "$LINENO" $ac_header ac_cv_header_$ac_cache "$ac_includes_default"
+    if eval test \"x\$ac_cv_header_$ac_cache\" = xyes; then
+      printf "%s\n" "#define $ac_item 1" >> confdefs.h
+    fi
+    ac_header= ac_cache=
+  elif test $ac_header; then
+    ac_cache=$ac_item
+  else
+    ac_header=$ac_item
+  fi
+done
+
+
+
+
+
+
+
+
+if test $ac_cv_header_stdlib_h = yes && test $ac_cv_header_string_h = yes
+then :
+
+printf "%s\n" "#define STDC_HEADERS 1" >>confdefs.h
+
+fi
 ac_fn_c_check_header_compile "$LINENO" "sys/sendfile.h" "ac_cv_header_sys_sendfile_h" "$ac_includes_default"
 if test "x$ac_cv_header_sys_sendfile_h" = xyes
 then :
@@ -4003,7 +4111,6 @@ else $as_nop
   cf_use_ip6=yes
 fi
 
-
 if test "$cf_use_ip6" = "yes"
 then
 printf "%s\n" "#define USE_INET6 1" >>confdefs.h
@@ -4016,9 +4123,8 @@ if test ${enable_xattr+y}
 then :
   enableval=$enable_xattr; cf_use_xattr=$enableval
 else $as_nop
-  cf_use_xattr=yes
+  cf_use_xattr=no
 fi
-
 
 if test "$cf_use_xattr" = "yes"
 then
@@ -4081,7 +4187,6 @@ then :
 else $as_nop
   cf_use_namespaces=yes
 fi
-
 
 if test "$cf_use_namespaces" = "yes"
 then
@@ -4186,63 +4291,6 @@ fi
         fi
 fi
 
-
-# Check whether --enable-zlib was given.
-if test ${enable_zlib+y}
-then :
-  enableval=$enable_zlib; cf_use_zlib=$enableval
-else $as_nop
-  cf_use_zlib=no
-fi
-
-
-if test "$cf_use_zlib" = "yes" -o "$cf_use_ssl" = "yes"
-then
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for deflate in -lz" >&5
-printf %s "checking for deflate in -lz... " >&6; }
-if test ${ac_cv_lib_z_deflate+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lz  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-char deflate ();
-int
-main (void)
-{
-return deflate ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  ac_cv_lib_z_deflate=yes
-else $as_nop
-  ac_cv_lib_z_deflate=no
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_z_deflate" >&5
-printf "%s\n" "$ac_cv_lib_z_deflate" >&6; }
-if test "x$ac_cv_lib_z_deflate" = xyes
-then :
-  printf "%s\n" "#define HAVE_LIBZ 1" >>confdefs.h
-
-  LIBS="-lz $LIBS"
-
-fi
-
-cf_have_libz=$ac_cv_lib_z_deflate
-fi
 
 
 # Check whether --enable-ssl was given.
@@ -4858,6 +4906,65 @@ rm -rf conftest*
 fi
 
 
+fi
+
+
+
+# Check whether --enable-zlib was given.
+if test ${enable_zlib+y}
+then :
+  enableval=$enable_zlib; cf_use_zlib=$enableval
+else $as_nop
+  cf_use_zlib=no
+fi
+
+
+if test "$cf_use_zlib" = "yes" -o "$cf_use_ssl" = "yes"
+then
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for deflate in -lz" >&5
+printf %s "checking for deflate in -lz... " >&6; }
+if test ${ac_cv_lib_z_deflate+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lz  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+char deflate ();
+int
+main (void)
+{
+return deflate ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_lib_z_deflate=yes
+else $as_nop
+  ac_cv_lib_z_deflate=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_z_deflate" >&5
+printf "%s\n" "$ac_cv_lib_z_deflate" >&6; }
+if test "x$ac_cv_lib_z_deflate" = xyes
+then :
+  printf "%s\n" "#define HAVE_LIBZ 1" >>confdefs.h
+
+  LIBS="-lz $LIBS"
+
+fi
+
+cf_have_libz=$ac_cv_lib_z_deflate
 fi
 
 
@@ -6111,6 +6218,12 @@ fi
 echo
 echo
 echo "############# libUseful Build Config: #############"
+
+echo "compile with -Wall - $cf_use_wall"
+echo "compile with -Werror - $cf_use_werror"
+echo "compile with FORTIFY_SOURCE=3 - $cf_use_fortify"
+echo "compile with -fstack-protector-strong - $cf_use_stackprotect"
+
 if test "$ac_cv_sys_file_offset_bits" = "64"
 then
 echo "Largefiles ( > 2GB ) enabled"
@@ -6148,7 +6261,7 @@ else
 echo "SSL/TLS NOT enabled"
 fi
 
-if test "$cf_use_zlib" = "yes"
+if test "$cf_have_libz" = "yes"
 then
 echo "zlib support enabled"
 else
