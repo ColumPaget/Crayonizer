@@ -1,5 +1,8 @@
 #include "common.h"
 
+char *Version="2.6";
+
+
 ListNode *Vars=NULL;
 int ScreenRows=0, ScreenCols=0;
 int LineNo=0;

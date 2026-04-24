@@ -558,6 +558,7 @@ static void ConfigReadEntry(STREAM *S, ListNode *CrayonList)
             else if (strcasecmp(Token,"lineedit")==0) KeypressFlags |= KEYPRESS_LINEDIT;
             else if (strcasecmp(Token,"expectlines")==0) GlobalFlags |= FLAG_EXPECT_LINES;
             else if (strcasecmp(Token,"allowchildcrayon")==0) GlobalFlags |= FLAG_CHILDCRAYON;
+            else if (strcasecmp(Token,"allowsu")==0) GlobalFlags |= FLAG_ALLOW_SU;
             else if (strcasecmp(Token,"keypress")==0) Crayon=KeypressParse(ptr);
             else if (strcasecmp(Token,"selection")==0) StatusBarParseSelection(S, ptr);
             //these commands are effectively keypress without 'keypress' so pass

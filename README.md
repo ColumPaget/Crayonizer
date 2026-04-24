@@ -1,5 +1,5 @@
 
-SYNOSIS
+SYNOPSIS
 =======
 
 Crayonizer is an application that modifies the output of other text programs. It can color in text, trigger events on certain text matches, handle or translate keypresses, rewrite the command-line, alter the xterm title or add info-bars or popup menu bars. Uses include:
@@ -124,7 +124,7 @@ Crayonizer uses a config file to configure its behavior. It will look for config
 
 Note the leading '.' for entries in the user home directory, this is so they are 'hidden' in a normal 'ls' listing of the directory.
 
-The crayonizer config file MUST contain a 'CrayonizerDir' entry so crayonizer knows where it lives so that it can avoid starting itself. If crayonizer spawns itself, the results will be really bad, because the new crayonize process will also spawn itself, as will the next, and the next, and the next (it's the programmatic equivalent from that scene from Disney's Fantasia where Mickey creates all the golem brooms). This is called a 'forkbomb' and it can take down some systems by filling up their processs tables. Since version 1.0 crayonizer tries to prevent this by setting an environment variable that tells child processes that there's already a crayonizer running, so don't start up any more. However, in some situations, like when crayonizer is used to crayonize a terminal, this feature is explicitly switched off, in which case the 'CrayonizerDir' environment variable is all that stands in the way of a forkbombing.
+The crayonizer config file MUST contain a 'CrayonizerDir' entry so crayonizer knows where it lives so that it can avoid starting itself. If crayonizer spawns itself, the results will be really bad, because the new crayonize process will also spawn itself, as will the next, and the next, and the next (it's the programmatic equivalent from that scene from Disney's Fantasia where Mickey creates all the golem brooms). This is called a 'forkbomb' and it can take down some systems by filling up their process tables. Since version 1.0 crayonizer tries to prevent this by setting an environment variable that tells child processes that there's already a crayonizer running, so don't start up any more. However, in some situations, like when crayonizer is used to crayonize a terminal, this feature is explicitly switched off, in which case the 'CrayonizerDir' environment variable is all that stands in the way of a forkbombing.
 
 The config file also contains 'entry' sections for each program that you want to crayonize. These contain either settings related to running/crayonizing the program, or 'crayonization' lines of the form '<action type> <pattern match> <crayonizations> 
 
@@ -132,7 +132,7 @@ The config file also contains 'entry' sections for each program that you want to
 SETTINGS
 =========
 
-These change the behavior of crayonizer's interaction with the program that it's crayonizing. 
+Setting in the config-file change the behavior of crayonizer's interaction with the program that it's crayonizing. The names of settings are case insensitive, so "passinput", "PassInput" and "PASSINPUT" will all behave the same. Available settings are:
 
 ```
 		command <program path>
@@ -184,6 +184,12 @@ Expect the program output to be made up of lines terminated by newline. This is 
 ```
 
 Allow child processes to run crayonizers. By default a crayonizer process sets an environment variable to prevent running another copy of itself. This is to prevent cyclic loops of crayonizers spawning crayonizers. However, if, say, one is using crayonizer to add features to an xterm, then we'd want to be able to run crayonized subprobrams in the xterm. We'd still want any programs run in the xterm to be crayonized if they're been configured to be so. The AllowChildCrayon disables setting the environment variable, thus allowing crayonizer sub-processes to be run.
+
+```
+		AllowSU
+```
+
+Allow a child process to switch user (particularly switch user to root). Without this setting commands like 'su', 'sudo' and 'ping' will not work, because they require raised priviledges. This is a security measure applied by default in crayonizer after v2.6.
 
 
 

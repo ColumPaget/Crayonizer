@@ -10,6 +10,6 @@ extern time_t StartTime;
 void SetDurationVariable();
 void ParseTimer(const char *Config);
 void UpdateTimer(TCrayon *Timer);
-void ProcessTimers();
+void ProcessTimers(STREAM *Pipe);
 
 #endif

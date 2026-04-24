@@ -1,12 +1,12 @@
 CC = gcc
-CFLAGS = -g -O2 -O2 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -fstack-protector-strong
-LIBS = -lm -lz 
+CFLAGS = -g -O2
+LIBS = -lm -lUseful-5 -lz 
 INSTALL=/usr/bin/install -c
 prefix=/usr
 bindir=$(prefix)${exec_prefix}/bin
 DESTDIR=
-LIBUSEFUL_BUNDLED=libUseful/libUseful.a
-FLAGS=$(CFLAGS) -DPACKAGE_NAME=\"\" -DPACKAGE_TARNAME=\"\" -DPACKAGE_VERSION=\"\" -DPACKAGE_STRING=\"\" -DPACKAGE_BUGREPORT=\"\" -DPACKAGE_URL=\"\" -DHAVE_STDIO_H=1 -DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_INTTYPES_H=1 -DHAVE_STDINT_H=1 -DHAVE_STRINGS_H=1 -DHAVE_SYS_STAT_H=1 -DHAVE_SYS_TYPES_H=1 -DHAVE_UNISTD_H=1 -DSTDC_HEADERS=1 -DHAVE_LIBZ=1
+LIBUSEFUL_BUNDLED=
+FLAGS=$(CFLAGS) -DPACKAGE_NAME=\"\" -DPACKAGE_TARNAME=\"\" -DPACKAGE_VERSION=\"\" -DPACKAGE_STRING=\"\" -DPACKAGE_BUGREPORT=\"\" -DPACKAGE_URL=\"\" -DHAVE_STDIO_H=1 -DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_INTTYPES_H=1 -DHAVE_STDINT_H=1 -DHAVE_STRINGS_H=1 -DHAVE_SYS_STAT_H=1 -DHAVE_SYS_TYPES_H=1 -DHAVE_UNISTD_H=1 -DSTDC_HEADERS=1 -DHAVE_LIBZ=1 -DHAVE_LIBUSEFUL_5_LIBUSEFUL_H=1 -DHAVE_LIBUSEFUL_5=1
 
 
 
@@ -55,10 +55,10 @@ timers.o: timers.c timers.h common.h
 	$(CC) $(FLAGS) -c timers.c
 
 $(LIBUSEFUL_BUNDLED):
-	make -C libUseful
+	make -C libUseful-bundled
 
 clean:
-	@rm -f crayonizer *.o libUseful/*.o libUseful/*.a libUseful/*.so config.log config.status *.orig *~
+	@rm -f crayonizer *.o libUseful-bundled/*.o libUseful-bundled/*.a libUseful-bundled/*.so config.log config.status *.orig *~
 	@rm -rf autom4te.cache 
 
 install:

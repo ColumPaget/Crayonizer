@@ -79,23 +79,23 @@ static int IsInStringList(char *Item, char *List, char *Separator)
 //e.g. 'tar -zcf' will match to 'arg(z)'
 static int Match1CharCommandLineArg(const char *Arg)
 {
-const char *ptr, *tptr, *aptr;
-int i;
+    const char *ptr, *tptr, *aptr;
+    int i;
 
-for (i=1; i < cmdline_argc; i++)
-{
-     aptr=cmdline_argv[i];
-     if (*aptr=='-') aptr++;
-     for ( ; *aptr != '\0'; aptr++)
-     {
-           for (tptr=Arg; *tptr != '\0'; tptr++)
-           {
-               if (*aptr == *tptr) return(TRUE);
-           }
-     }
-}
+    for (i=1; i < cmdline_argc; i++)
+    {
+        aptr=cmdline_argv[i];
+        if (*aptr=='-') aptr++;
+        for ( ; *aptr != '\0'; aptr++)
+        {
+            for (tptr=Arg; *tptr != '\0'; tptr++)
+            {
+                if (*aptr == *tptr) return(TRUE);
+            }
+        }
+    }
 
-return(FALSE);
+    return(FALSE);
 }
 
 
@@ -103,18 +103,18 @@ return(FALSE);
 //whether it is in the form '-this' or '--that'
 static int MatchLongCommandLineArg(const char *Arg)
 {
-int i;
-const char *tptr;
+    int i;
+    const char *tptr;
 
-                for (i=1; i < cmdline_argc; i++)
-                {
-                    tptr=cmdline_argv[i];
-                    while (*tptr=='-') tptr++;
+    for (i=1; i < cmdline_argc; i++)
+    {
+        tptr=cmdline_argv[i];
+        while (*tptr=='-') tptr++;
 
-                    if (strcmp(tptr,Arg)==0) return(TRUE);
-                }
+        if (strcmp(tptr,Arg)==0) return(TRUE);
+    }
 
-return(FALSE);
+    return(FALSE);
 }
 
 
@@ -136,9 +136,9 @@ static int HandleCrayonIf(TCrayon *Crayon)
             result=FALSE;
             if (strncmp(Token,"arg(",4)==0)
             {
-		Tempstr=CopyStr(Tempstr, Token+4);
-		StrRTruncChar(Tempstr, ')');
-		result=Match1CharCommandLineArg(Tempstr);
+                Tempstr=CopyStr(Tempstr, Token+4);
+                StrRTruncChar(Tempstr, ')');
+                result=Match1CharCommandLineArg(Tempstr);
             }
             break;
 
@@ -153,7 +153,7 @@ static int HandleCrayonIf(TCrayon *Crayon)
             {
                 Tempstr=CopyStr(Tempstr,Token+5);
                 StrRTruncChar(Tempstr, ')');
-		result=MatchLongCommandLineArg(Tempstr);
+                result=MatchLongCommandLineArg(Tempstr);
             }
             break;
 
@@ -406,8 +406,8 @@ static void ApplySingleAction(STREAM *Pipe, int *AttribLine, char *Line, int Len
 
 
     case ACTION_REPLACE:
-	pos=MatchStart-Line;
-	if ((pos > 0) && (pos < Len)) strncpy(Line+pos,Action->String,MatchEnd-MatchStart);
+        pos=MatchStart-Line;
+        if ((pos > 0) && (pos < Len)) strncpy(Line+pos,Action->String,MatchEnd-MatchStart);
         break;
 
     case ACTION_SETENV:

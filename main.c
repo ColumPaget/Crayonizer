@@ -35,7 +35,6 @@
 #define NORM "\x1b[0m"
 #define CLRSCR "\x1b[2J\x1b[;H"
 
-char *Version="2.5";
 char *ConfigPaths=NULL;
 int GlobalFlags=0;
 
@@ -50,23 +49,18 @@ int ColorProgramOutput(STREAM *Pipe, ListNode *CrayonList)
     int result, len=0;
     char *Tempstr=NULL;
 
-    if (! Buffer) Buffer=(char *) calloc(1,4097);
-    result=STREAMReadBytes(Pipe,Buffer+BuffFill,4096-BuffFill);
+    if (! Buffer) Buffer=(char *) calloc(1, 4097);
+    result=STREAMReadBytes(Pipe, Buffer + BuffFill, 4096 - BuffFill);
 
     //Although we only read 'result' bytes, we already had 'BuffFill' bytes carried over
     //from last time (we were halfway through an ascii sequence, and expect to have the
     //rest of it in this read)
-    result+=BuffFill;
+    if (result > 0) BuffFill += result;
 
 
-    //if we fail to consume all the string, we will reset BuffFill to the remainder, so here we zero it
-    BuffFill=0;
+    StrTrunc(Buffer, BuffFill);
+    end=Buffer + BuffFill;
 
-    if (result < 1) return(STREAM_CLOSED);
-
-    StrTrunc(Buffer, result);
-
-    end=Buffer+result;
     start=Buffer;
     for (ptr=start; ptr < end; )
     {
@@ -88,8 +82,9 @@ int ColorProgramOutput(STREAM *Pipe, ListNode *CrayonList)
             case ES_PART:
                 //We have part of an ANSI sequence, with a bit missing. We are at the end of the sequence, so we move it to
                 //the start of the Buffer and set BuffFill to be the length of this part.
-                BuffFill=end-start;
-                memmove(Buffer,start,BuffFill);
+                BuffFill= end - start;
+                memmove(Buffer, start, BuffFill);
+                Destroy(Tempstr);
                 return(BuffFill);
                 break;
 
@@ -115,19 +110,22 @@ int ColorProgramOutput(STREAM *Pipe, ListNode *CrayonList)
         }
     }
 
+    //we won't be using this again, so free it here
+    Destroy(Tempstr);
 
-    result=ptr - start;
-    if (result > 0)
+    //'start' will be updated with how much data we have consumed
+    BuffFill=end - start;
+    if (BuffFill > 0)
     {
         if (GlobalFlags & FLAG_EXPECT_LINES)
         {
-            memmove(Buffer, start, result);
-            BuffFill=result;
+            memmove(Buffer, start, BuffFill);
             return(BuffFill);
         }
         else
         {
-            Crayonize(Pipe, start, result, FALSE, CrayonList);
+            Crayonize(Pipe, start, BuffFill, FALSE, CrayonList);
+            BuffFill=0;
         }
     }
 
@@ -139,10 +137,11 @@ int ColorProgramOutput(STREAM *Pipe, ListNode *CrayonList)
         GlobalFlags &= ~FLAG_REDRAW;
     }
 
-    Destroy(Tempstr);
 
 //Don't do this, is static
 //Destroy(Buffer);
+
+    if (result < 1) return(STREAM_CLOSED);
     return(BuffFill);
 }
 
@@ -237,6 +236,7 @@ STREAM *LaunchCommands(int argc, char *argv[], ListNode *Matches, const char *Cr
     }
 
     Pipe=STREAMSpawnCommand(Tempstr, "rw pty echo canon icrlf trust noshell, ctty");
+    STREAMSetTimeout(Pipe, 1);
     SetupSignals();
 
 //Set initial window size, as though we'd received a SIGWINCH
@@ -289,7 +289,7 @@ void CrayonizerProcessInputs()
         if (S)
         {
             if (S==StdIn) result=KeypressProcess(StdIn, CommandPipe);
-            else result=ColorProgramOutput(CommandPipe, CrayonList);
+            else if (S==CommandPipe) result=ColorProgramOutput(CommandPipe, CrayonList);
 
             fflush(stdout);
             if (result == STREAM_CLOSED) break;
@@ -299,7 +299,7 @@ void CrayonizerProcessInputs()
         ProcessTimers(CommandPipe);
     }
 
-   PropagateSignals(CommandPipe);
+    PropagateSignals(CommandPipe);
 }
 
 
@@ -331,6 +331,8 @@ void CrayonizeCommand(int argc, char *argv[])
         }
     }
 
+    if (! (GlobalFlags & FLAG_ALLOW_SU)) ProcessApplyConfig("nosu");
+
     LoadEnvironment();
 
     if (! ListSize(CrayonList)) GlobalFlags |=FLAG_DONTCRAYON;
@@ -339,8 +341,8 @@ void CrayonizeCommand(int argc, char *argv[])
     {
         if (! (GlobalFlags & FLAG_DONTCRAYON)) TTYConfig(0, 0, TTYFLAG_IGNSIG | TTYFLAG_OUT_CRLF | TTYFLAG_SAVE);
         StdIn=STREAMFromFD(0);
-        STREAMSetTimeout(StdIn,10);
-        ListAddItem(Streams,StdIn);
+        STREAMSetTimeout(StdIn, 10);
+        ListAddItem(Streams, StdIn);
     }
     HandleSigwinch(NULL);
 
@@ -360,7 +362,7 @@ void CrayonizeCommand(int argc, char *argv[])
     CommandPipe=LaunchCommands(argc, argv, CrayonList, CrayonizerDir);
     ListAddItem(Streams,CommandPipe);
 
-    CrayonizerProcessInputs(Streams);
+    CrayonizerProcessInputs();
 
     //waitpid with WNOHANG will return 0 if there are children still running
     //the pid of a child if it exits
@@ -368,8 +370,8 @@ void CrayonizeCommand(int argc, char *argv[])
     //so we keep waiting and processing any signals we get until there are no children
     while (waitpid(-1, NULL, WNOHANG) > -1)
     {
-    usleep(10000); //sleep 10 ms
-    PropagateSignals(CommandPipe);
+        usleep(10000); //sleep 10 ms
+        PropagateSignals(CommandPipe);
     }
 
     SetDurationVariable();
@@ -427,50 +429,50 @@ void CalledAsSelf(int argc, char *argv[])
 
     if (argc < 2) PrintUsage();
     else for (i=1; i < argc; i++)
-    {
-        val=MatchTokenFromList(argv[i],Args,0);
-
-        switch(val)
         {
-        case ARG_V1:
-        case ARG_V2:
-        case ARG_V3:
-            printf("crayonizer (Crayonizer) %s\n",Version);
-            break;
+            val=MatchTokenFromList(argv[i],Args,0);
 
-        case ARG_H1:
-        case ARG_H2:
-        case ARG_H3:
-        case ARG_H4:
-            PrintUsage();
-            break;
+            switch(val)
+            {
+            case ARG_V1:
+            case ARG_V2:
+            case ARG_V3:
+                printf("crayonizer (Crayonizer) %s\n",Version);
+                break;
 
-        case ARG_CONFIG_HELP:
-            PrintConfigFileHelp();
-            break;
+            case ARG_H1:
+            case ARG_H2:
+            case ARG_H3:
+            case ARG_H4:
+                PrintUsage();
+                break;
 
-        case ARG_PMATCH_HELP:
-            PrintPMatchHelp();
-            break;
+            case ARG_CONFIG_HELP:
+                PrintConfigFileHelp();
+                break;
 
-        case ARG_STDIN:
-            CrayonizeSTDIN(argc, argv);
-            break;
+            case ARG_PMATCH_HELP:
+                PrintPMatchHelp();
+                break;
 
-        case ARG_CONFIG_PATH:
-            ConfigPaths=CopyStr(ConfigPaths, argv[++i]);
-            break;
+            case ARG_STDIN:
+                CrayonizeSTDIN(argc, argv);
+                break;
 
-        default:
-            new_argc++;
-            new_argv=(char **) realloc(new_argv,sizeof(char *) * new_argc);
-            new_argv[new_argc-1]=argv[i];
-            break;
+            case ARG_CONFIG_PATH:
+                ConfigPaths=CopyStr(ConfigPaths, argv[++i]);
+                break;
+
+            default:
+                new_argc++;
+                new_argv=(char **) realloc(new_argv,sizeof(char *) * new_argc);
+                new_argv[new_argc-1]=argv[i];
+                break;
+            }
+
         }
 
-    }
-
-    if (new_argc > 0) CrayonizeCommand(new_argc,new_argv);
+    if (new_argc > 0) CrayonizeCommand(new_argc, new_argv);
 }
 
 
@@ -595,6 +597,8 @@ int main(int argc, char *argv[])
 {
     char *ptr;
 
+
+    ProcessApplyConfig("mdwe");
     cmdline_argc=argc;
     cmdline_argv=argv;
 
@@ -612,9 +616,9 @@ int main(int argc, char *argv[])
     {
         ptr=basename(argv[0]);
         argv[0]=ptr;
-        CrayonizeCommand(argc,argv);
+        CrayonizeCommand(argc, argv);
     }
     TTYReset(0);
 
-return(0);
+    return(0);
 }

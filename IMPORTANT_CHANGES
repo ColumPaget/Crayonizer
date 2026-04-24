@@ -1,3 +1,6 @@
+version 2.6 enables 'nosu' BY DEFAULT. This prevents apps run by crayonizer from raising priviledge on linux (provided the kernel supports this). If this is not desired the 'allowsu' option can be supplied in the relevant config file.
+
+
 version 2.0 removes sound support, as this caused all kinds of headaches. Sound support will likely come back in a future release.
 
 

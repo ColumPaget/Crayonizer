@@ -38,52 +38,52 @@ static char *CommandLineSubstituteItem(char *RetStr, int SubsType, const char *I
     //Tempstr now holds the text to substitute into the command-line
     Tempstr=SubstituteVarsInString(Tempstr, Substitute, Vars, 0);
 
-		//only process if we found a match
-		if (MatchStart)
-		{
-    switch (SubsType)
+    //only process if we found a match
+    if (MatchStart)
     {
-    //replace matching text with the substitution
-    case CMDLINE_SUB:
-        //copy up to match
-        RetStr=CopyStrLen(RetStr, Input, MatchStart - Input);
-        //append substition
-        RetStr=CatStr(RetStr, Tempstr);
-        //copy from end of match
-        RetStr=CatStr(RetStr, MatchEnd);
-        break;
+        switch (SubsType)
+        {
+        //replace matching text with the substitution
+        case CMDLINE_SUB:
+            //copy up to match
+            RetStr=CopyStrLen(RetStr, Input, MatchStart - Input);
+            //append substition
+            RetStr=CatStr(RetStr, Tempstr);
+            //copy from end of match
+            RetStr=CatStr(RetStr, MatchEnd);
+            break;
 
-    //insert substitution between ProgName and the rest of the command line
-    case CMDLINE_INSERT:
-        //extract program name/path
-        ptr=GetToken(Input, "\\S", &RetStr, GETTOKEN_QUOTES);
+        //insert substitution between ProgName and the rest of the command line
+        case CMDLINE_INSERT:
+            //extract program name/path
+            ptr=GetToken(Input, "\\S", &RetStr, GETTOKEN_QUOTES);
 
-        //insert substitution after program name
-        RetStr=MCatStr(RetStr, " ", Tempstr, NULL);
+            //insert substitution after program name
+            RetStr=MCatStr(RetStr, " ", Tempstr, NULL);
 
-        //copy up to substituted string
-        if (MatchStart) RetStr=CatStrLen(RetStr,ptr, MatchStart - ptr);
-        else RetStr=CatStr(RetStr, ptr);
+            //copy up to substituted string
+            if (MatchStart) RetStr=CatStrLen(RetStr,ptr, MatchStart - ptr);
+            else RetStr=CatStr(RetStr, ptr);
 
-        //clip out substituted string by jumping over it
-        if (MatchEnd) RetStr=MCatStr(RetStr, " ", MatchEnd, NULL);
-        break;
+            //clip out substituted string by jumping over it
+            if (MatchEnd) RetStr=MCatStr(RetStr, " ", MatchEnd, NULL);
+            break;
 
-    //append substitution to end of command line
-    case CMDLINE_APPEND:
-        //copy up to match
-        if (MatchStart) RetStr=CopyStrLen(RetStr,Input, MatchStart - Input);
-        else RetStr=CatStr(RetStr, Input);
+        //append substitution to end of command line
+        case CMDLINE_APPEND:
+            //copy up to match
+            if (MatchStart) RetStr=CopyStrLen(RetStr,Input, MatchStart - Input);
+            else RetStr=CatStr(RetStr, Input);
 
-        //clip out substituted string by jumping over it
-        if (MatchEnd) RetStr=MCatStr(RetStr, " ", MatchEnd, NULL);
-        else RetStr=CatStr(RetStr, " ");
+            //clip out substituted string by jumping over it
+            if (MatchEnd) RetStr=MCatStr(RetStr, " ", MatchEnd, NULL);
+            else RetStr=CatStr(RetStr, " ");
 
-        //append substition
-        RetStr=CatStr(RetStr, Tempstr);
-        break;
+            //append substition
+            RetStr=CatStr(RetStr, Tempstr);
+            break;
+        }
     }
-		}
 
     Destroy(Tempstr);
     return(RetStr);

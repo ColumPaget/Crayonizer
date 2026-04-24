@@ -1,3 +1,8 @@
+v2.6 (2026-04-21)
+  * fix/improve "ColorOutput" to prevent lost ANSI characters
+  * Add 'no su' feature and 'mdwe', both enabled by default
+  * fix some build failures
+
 v2.5 (2024-02-22)
   * deal with race condition where we wait for child process to exit before we've sent it SIGTERM, causing a hung process
   * add --enable-fortify --enable-stack-protect and --enable-harden to ./configure

@@ -3,7 +3,13 @@
 #define CRAYONIZER_COMMON_H
 
 #define _GNU_SOURCE 
-#include "libUseful/libUseful.h"
+
+#ifdef LIBUSEFUL_BUNDLED
+#include "./libUseful-bundled/libUseful.h"
+#else
+#include "libUseful-5/libUseful.h"
+#endif
+
 #include <sys/types.h>
 #include <glob.h>
 #include <regex.h>
@@ -24,6 +30,7 @@
 #define FLAG_USE_PTY 4096
 #define FLAG_STRIP_ANSI 8192
 #define FLAG_STRIP_XTITLE 16384
+#define FLAG_ALLOW_SU 32768
 
 
 //these go in highbytes of 'Crayon->Action->Attribs'

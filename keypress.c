@@ -298,21 +298,21 @@ static int ReadEscapeSequence(STREAM *StdIn, char *Sequence, char *KeySym, int M
             end++;
             return(end-Sequence);
             break;
-	
-	    //strings like this are Operating System Control sequences
-	    //used to pass data back and forth and reply to status queries
-	    //they must end in either BEL (0x07) or String Terminator (0x9c)
-	case ']':
-		while (ptr < max)
-		{
-		ptr++;
-            	result=STREAMReadBytes(StdIn, ptr,1);
-		if (result < 1) break;
-		end++;
-		if (*ptr==0x7) break;
-		if (*ptr==0x9c) break;
-		}
-	    break;
+
+        //strings like this are Operating System Control sequences
+        //used to pass data back and forth and reply to status queries
+        //they must end in either BEL (0x07) or String Terminator (0x9c)
+        case ']':
+            while (ptr < max)
+            {
+                ptr++;
+                result=STREAMReadBytes(StdIn, ptr,1);
+                if (result < 1) break;
+                end++;
+                if (*ptr==0x7) break;
+                if (*ptr==0x9c) break;
+            }
+            break;
 
         case '[':
             ptr++;
