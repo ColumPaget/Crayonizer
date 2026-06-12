@@ -3,7 +3,9 @@ CFLAGS = @CFLAGS@
 LIBS = -lm @LIBS@
 INSTALL=@INSTALL@
 prefix=@prefix@
-bindir=$(prefix)@bindir@
+exec_prefix=@exec_prefix@
+bindir=@bindir@
+mandir=@mandir@
 DESTDIR=
 LIBUSEFUL_BUNDLED=@LIBUSEFUL_BUNDLED@
 FLAGS=$(CFLAGS) @DEFS@
@@ -65,7 +67,9 @@ install:
 	-$(INSTALL) -d $(DESTDIR)$(bindir)
 	-$(INSTALL) crayonizer $(DESTDIR)$(bindir)
 	-$(INSTALL) -d $(DESTDIR)/etc/crayonizer.d
-	-cp -n examples/* $(DESTDIR)/etc/crayonizer.d
+	-$(INSTALL) -d $(DESTDIR)$(mandir)
+	-$(INSTALL) crayonizer.1 $(DESTDIR)$(mandir)
+	-cp -nv examples/* $(DESTDIR)/etc/crayonizer.d
 	-$(INSTALL) -d $(DESTDIR)/$(prefix)/prebin
 	-for PROG in ssh sftp tcpdump nmap make ifconfig ping ; do ln -s $(DESTDIR)$(bindir)/crayonizer $(DESTDIR)/$(prefix)/prebin/$$PROG; done
 

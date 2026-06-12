@@ -1,12 +1,14 @@
 CC = gcc
-CFLAGS = -g -O2
-LIBS = -lm -lUseful-5 -lz 
-INSTALL=/usr/bin/install -c
+CFLAGS = -g -O2 -O2 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -fstack-protector-strong
+LIBS = -lm -lcap -lssl -lcrypto -lz 
+INSTALL=/bin/install -c
 prefix=/usr
-bindir=$(prefix)${exec_prefix}/bin
+exec_prefix=${prefix}
+bindir=${exec_prefix}/bin
+mandir=${prefix}/share/man
 DESTDIR=
-LIBUSEFUL_BUNDLED=
-FLAGS=$(CFLAGS) -DPACKAGE_NAME=\"\" -DPACKAGE_TARNAME=\"\" -DPACKAGE_VERSION=\"\" -DPACKAGE_STRING=\"\" -DPACKAGE_BUGREPORT=\"\" -DPACKAGE_URL=\"\" -DHAVE_STDIO_H=1 -DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_INTTYPES_H=1 -DHAVE_STDINT_H=1 -DHAVE_STRINGS_H=1 -DHAVE_SYS_STAT_H=1 -DHAVE_SYS_TYPES_H=1 -DHAVE_UNISTD_H=1 -DSTDC_HEADERS=1 -DHAVE_LIBZ=1 -DHAVE_LIBUSEFUL_5_LIBUSEFUL_H=1 -DHAVE_LIBUSEFUL_5=1
+LIBUSEFUL_BUNDLED=libUseful-bundled/libUseful.a
+FLAGS=$(CFLAGS) -DPACKAGE_NAME=\"\" -DPACKAGE_TARNAME=\"\" -DPACKAGE_VERSION=\"\" -DPACKAGE_STRING=\"\" -DPACKAGE_BUGREPORT=\"\" -DPACKAGE_URL=\"\" -DHAVE_STDIO_H=1 -DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_INTTYPES_H=1 -DHAVE_STDINT_H=1 -DHAVE_STRINGS_H=1 -DHAVE_SYS_STAT_H=1 -DHAVE_SYS_TYPES_H=1 -DHAVE_UNISTD_H=1 -DSTDC_HEADERS=1 -D_FILE_OFFSET_BITS=64 -DHAVE_LIBZ=1 -DHAVE_LIBCRYPTO=1 -DHAVE_LIBSSL=1 -DHAVE_LIBCAP=1 -DLIBUSEFUL_BUNDLED=1
 
 
 
@@ -65,7 +67,9 @@ install:
 	-$(INSTALL) -d $(DESTDIR)$(bindir)
 	-$(INSTALL) crayonizer $(DESTDIR)$(bindir)
 	-$(INSTALL) -d $(DESTDIR)/etc/crayonizer.d
-	-cp -n examples/* $(DESTDIR)/etc/crayonizer.d
+	-$(INSTALL) -d $(DESTDIR)$(mandir)
+	-$(INSTALL) crayonizer.1 $(DESTDIR)$(mandir)
+	-cp -nv examples/* $(DESTDIR)/etc/crayonizer.d
 	-$(INSTALL) -d $(DESTDIR)/$(prefix)/prebin
 	-for PROG in ssh sftp tcpdump nmap make ifconfig ping ; do ln -s $(DESTDIR)$(bindir)/crayonizer $(DESTDIR)/$(prefix)/prebin/$$PROG; done
 

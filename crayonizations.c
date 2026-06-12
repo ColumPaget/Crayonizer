@@ -235,7 +235,6 @@ static int CrayonMatches(TCrayon *Crayon, const char *sptr, const char *eptr)
     int i, result=FALSE, pos1, pos2;
     float val;
 
-
     switch (Crayon->Type)
     {
 //These always 'match', as they are not checks on the value of anything
@@ -334,7 +333,7 @@ static void PassToProgram(STREAM *Pipe, const char *ActivateLine, const char *Pr
     Tempstr=SetStrLen(Tempstr,4096);
     STREAMFlush(Pipe);
 
-    if (StrLen(ActivateLine)) result=write(CmdS->out_fd,ActivateLine,StrLen(ActivateLine));
+    if (StrValid(ActivateLine)) result=write(CmdS->out_fd, ActivateLine, StrLen(ActivateLine));
 
     while (1)
     {
@@ -415,15 +414,15 @@ static void ApplySingleAction(STREAM *Pipe, int *AttribLine, char *Line, int Len
         ptr=strchr(Action->String,'=');
         if (ptr)
         {
-            EnvName=CopyStrLen(EnvName,Action->String,ptr-Action->String);
-            Tempstr=CopyStr(Tempstr,ptr+1);
+            EnvName=CopyStrLen(EnvName, Action->String, ptr-Action->String);
+            Tempstr=CopyStr(Tempstr, ptr+1);
         }
         else
         {
-            EnvName=CopyStr(EnvName,Action->String);
+            EnvName=CopyStr(EnvName, Action->String);
             //end points to last character in match, not character after it
             //so we must +1 to len
-            Tempstr=CopyStrLen(Tempstr,MatchStart,(end-start)+1);
+            Tempstr=CopyStrLen(Tempstr, MatchStart, (end-start)+1);
         }
         StripTrailingWhitespace(Tempstr);
 
@@ -460,7 +459,6 @@ static void ApplySingleAction(STREAM *Pipe, int *AttribLine, char *Line, int Len
         STREAMWriteLine(Tempstr,Pipe);
         STREAMFlush(Pipe);
         usleep(25000);
-        //fprintf(stderr,"SEND '%s'\n",Tempstr);
         break;
 
     case ACTION_ECHO:

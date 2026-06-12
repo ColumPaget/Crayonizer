@@ -1400,8 +1400,8 @@ Optional Features:
   --enable-whirl          enable internal whirlpool hash support (default=yes)
   --enable-jh             enable internal jh hash support (default=yes)
   --enable-namespaces     enable linux namespace support (default=yes)
-  --enable-ssl            use Secure Sockets Layer (default=no)
-  --enable-zlib           use ZLib Compression (default=no)
+  --enable-ssl            use Secure Sockets Layer (default=yes)
+  --enable-zlib           use ZLib Compression (default=yes)
   --enable-simd=<level>   use SIMD cpu extensions, 'level' can be one of mmx,
                           sse, sse2 (default=no)
   --enable-backtrace      use glibc backtrace (default=auto)
@@ -2507,7 +2507,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 if test "$AR" = ""
 then :
 
-AR=ar
+    AR=ar
 
 fi
 
@@ -2516,7 +2516,7 @@ fi
 if test "$LN" = ""
 then :
 
-LN=ln
+    LN=ln
 
 fi
 
@@ -4008,9 +4008,9 @@ fi
 if test "$cf_use_lgpl" = "yes"
 then :
 
-LICENSE="LGPL"
+    LICENSE="LGPL"
 
-printf "%s\n" "#define USE_LGPL 1" >>confdefs.h
+    printf "%s\n" "#define USE_LGPL 1" >>confdefs.h
 
 
 fi
@@ -4029,7 +4029,7 @@ fi
 if test "$cf_use_wall" = "yes"
 then :
 
-CFLAGS="$CFLAGS -Wall"
+    CFLAGS="$CFLAGS -Wall"
 
 fi
 
@@ -4046,7 +4046,7 @@ fi
 if test "$cf_use_werror" = "yes"
 then :
 
-CFLAGS="$CFLAGS -Werror"
+    CFLAGS="$CFLAGS -Werror"
 
 fi
 
@@ -4093,18 +4093,18 @@ SONAME_FLAGS=""
 if test "$cf_use_soname" != "no"
 then :
 
-if test "$GCC" = "yes"
+    if test "$GCC" = "yes"
 then :
 
-SONAME_FLAGS='-Wl,${LINKER_SONAME_OPTION},${SONAME}'
+        SONAME_FLAGS='-Wl,${LINKER_SONAME_OPTION},${SONAME}'
 
 
 else $as_nop
 
-if test "$cf_use_soname" = "yes"
+	if test "$cf_use_soname" = "yes"
 then :
 
-SONAME_FLAGS='-Wl,${LINKER_SONAME_OPTION},${SONAME}'
+		SONAME_FLAGS='-Wl,${LINKER_SONAME_OPTION},${SONAME}'
 
 
 fi
@@ -4118,20 +4118,18 @@ fi
 if test "$cf_use_harden" = "yes"
 then :
 
-cf_use_fortify="yes"
-cf_use_stackprotect="yes"
+    cf_use_fortify="yes"
+    cf_use_stackprotect="yes"
 
 
-COMP_OPT=""-ftrivial-auto-var-init=zero""
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if compiler supports $COMP_OPT" >&5
+	COMP_OPT=""-ftrivial-auto-var-init=zero""
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if compiler supports $COMP_OPT" >&5
 printf %s "checking if compiler supports $COMP_OPT... " >&6; }
-OLD_CFLAGS="$CFLAGS"
-CFLAGS="$CFLAGS $COMP_OPT"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+	OLD_CFLAGS="$CFLAGS"
+	CFLAGS="$CFLAGS $COMP_OPT"
+	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-test() {
-return 1;
-}
+test(){return 1;}
 int
 main (void)
 {
@@ -4147,24 +4145,22 @@ else $as_nop
   COMP_OPT_SUPPORT="no"
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $COMP_OPT_SUPPORT" >&5
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $COMP_OPT_SUPPORT" >&5
 printf "%s\n" "$COMP_OPT_SUPPORT" >&6; }
-if test "$COMP_OPT_SUPPORT" != "yes"
+	if test "$COMP_OPT_SUPPORT" != "yes"
 then :
   CFLAGS="$OLD_CFLAGS"
 fi
 
 
-COMP_OPT=""-fstack-clash-protection""
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if compiler supports $COMP_OPT" >&5
+	COMP_OPT=""-fstack-clash-protection""
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if compiler supports $COMP_OPT" >&5
 printf %s "checking if compiler supports $COMP_OPT... " >&6; }
-OLD_CFLAGS="$CFLAGS"
-CFLAGS="$CFLAGS $COMP_OPT"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+	OLD_CFLAGS="$CFLAGS"
+	CFLAGS="$CFLAGS $COMP_OPT"
+	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-test() {
-return 1;
-}
+test(){return 1;}
 int
 main (void)
 {
@@ -4180,24 +4176,22 @@ else $as_nop
   COMP_OPT_SUPPORT="no"
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $COMP_OPT_SUPPORT" >&5
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $COMP_OPT_SUPPORT" >&5
 printf "%s\n" "$COMP_OPT_SUPPORT" >&6; }
-if test "$COMP_OPT_SUPPORT" != "yes"
+	if test "$COMP_OPT_SUPPORT" != "yes"
 then :
   CFLAGS="$OLD_CFLAGS"
 fi
 
 
-COMP_OPT=""-fno-strict-overflow""
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if compiler supports $COMP_OPT" >&5
+	COMP_OPT=""-fno-strict-overflow""
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if compiler supports $COMP_OPT" >&5
 printf %s "checking if compiler supports $COMP_OPT... " >&6; }
-OLD_CFLAGS="$CFLAGS"
-CFLAGS="$CFLAGS $COMP_OPT"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+	OLD_CFLAGS="$CFLAGS"
+	CFLAGS="$CFLAGS $COMP_OPT"
+	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-test() {
-return 1;
-}
+test(){return 1;}
 int
 main (void)
 {
@@ -4213,24 +4207,22 @@ else $as_nop
   COMP_OPT_SUPPORT="no"
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $COMP_OPT_SUPPORT" >&5
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $COMP_OPT_SUPPORT" >&5
 printf "%s\n" "$COMP_OPT_SUPPORT" >&6; }
-if test "$COMP_OPT_SUPPORT" != "yes"
+	if test "$COMP_OPT_SUPPORT" != "yes"
 then :
   CFLAGS="$OLD_CFLAGS"
 fi
 
 
-COMP_OPT=""-fno-strict-aliasing""
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if compiler supports $COMP_OPT" >&5
+	COMP_OPT=""-fno-strict-aliasing""
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if compiler supports $COMP_OPT" >&5
 printf %s "checking if compiler supports $COMP_OPT... " >&6; }
-OLD_CFLAGS="$CFLAGS"
-CFLAGS="$CFLAGS $COMP_OPT"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+	OLD_CFLAGS="$CFLAGS"
+	CFLAGS="$CFLAGS $COMP_OPT"
+	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-test() {
-return 1;
-}
+test(){return 1;}
 int
 main (void)
 {
@@ -4246,24 +4238,22 @@ else $as_nop
   COMP_OPT_SUPPORT="no"
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $COMP_OPT_SUPPORT" >&5
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $COMP_OPT_SUPPORT" >&5
 printf "%s\n" "$COMP_OPT_SUPPORT" >&6; }
-if test "$COMP_OPT_SUPPORT" != "yes"
+	if test "$COMP_OPT_SUPPORT" != "yes"
 then :
   CFLAGS="$OLD_CFLAGS"
 fi
 
 
-COMP_OPT=""-fno-delete-null-pointer-checks""
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if compiler supports $COMP_OPT" >&5
+	COMP_OPT=""-fno-delete-null-pointer-checks""
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if compiler supports $COMP_OPT" >&5
 printf %s "checking if compiler supports $COMP_OPT... " >&6; }
-OLD_CFLAGS="$CFLAGS"
-CFLAGS="$CFLAGS $COMP_OPT"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+	OLD_CFLAGS="$CFLAGS"
+	CFLAGS="$CFLAGS $COMP_OPT"
+	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-test() {
-return 1;
-}
+test(){return 1;}
 int
 main (void)
 {
@@ -4279,24 +4269,22 @@ else $as_nop
   COMP_OPT_SUPPORT="no"
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $COMP_OPT_SUPPORT" >&5
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $COMP_OPT_SUPPORT" >&5
 printf "%s\n" "$COMP_OPT_SUPPORT" >&6; }
-if test "$COMP_OPT_SUPPORT" != "yes"
+	if test "$COMP_OPT_SUPPORT" != "yes"
 then :
   CFLAGS="$OLD_CFLAGS"
 fi
 
 
-COMP_OPT=""-fcf-protection=full""
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if compiler supports $COMP_OPT" >&5
+	COMP_OPT=""-fcf-protection=full""
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if compiler supports $COMP_OPT" >&5
 printf %s "checking if compiler supports $COMP_OPT... " >&6; }
-OLD_CFLAGS="$CFLAGS"
-CFLAGS="$CFLAGS $COMP_OPT"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+	OLD_CFLAGS="$CFLAGS"
+	CFLAGS="$CFLAGS $COMP_OPT"
+	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-test() {
-return 1;
-}
+test(){return 1;}
 int
 main (void)
 {
@@ -4312,24 +4300,22 @@ else $as_nop
   COMP_OPT_SUPPORT="no"
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $COMP_OPT_SUPPORT" >&5
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $COMP_OPT_SUPPORT" >&5
 printf "%s\n" "$COMP_OPT_SUPPORT" >&6; }
-if test "$COMP_OPT_SUPPORT" != "yes"
+	if test "$COMP_OPT_SUPPORT" != "yes"
 then :
   CFLAGS="$OLD_CFLAGS"
 fi
 
 
-COMP_OPT=""-mmitigate-rop""
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if compiler supports $COMP_OPT" >&5
+	COMP_OPT=""-mmitigate-rop""
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if compiler supports $COMP_OPT" >&5
 printf %s "checking if compiler supports $COMP_OPT... " >&6; }
-OLD_CFLAGS="$CFLAGS"
-CFLAGS="$CFLAGS $COMP_OPT"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+	OLD_CFLAGS="$CFLAGS"
+	CFLAGS="$CFLAGS $COMP_OPT"
+	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-test() {
-return 1;
-}
+test(){return 1;}
 int
 main (void)
 {
@@ -4345,9 +4331,9 @@ else $as_nop
   COMP_OPT_SUPPORT="no"
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $COMP_OPT_SUPPORT" >&5
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $COMP_OPT_SUPPORT" >&5
 printf "%s\n" "$COMP_OPT_SUPPORT" >&6; }
-if test "$COMP_OPT_SUPPORT" != "yes"
+	if test "$COMP_OPT_SUPPORT" != "yes"
 then :
   CFLAGS="$OLD_CFLAGS"
 fi
@@ -4359,7 +4345,7 @@ fi
 if test "$cf_use_fortify" = "yes"
 then :
 
-CFLAGS="$CFLAGS -O2 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3"
+    CFLAGS="$CFLAGS -O2 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3"
 
 fi
 
@@ -4367,16 +4353,14 @@ if test "$cf_use_stackprotect" = "yes"
 then :
 
 
-COMP_OPT=""-fstack-protector-strong""
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if compiler supports $COMP_OPT" >&5
+	COMP_OPT=""-fstack-protector-strong""
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if compiler supports $COMP_OPT" >&5
 printf %s "checking if compiler supports $COMP_OPT... " >&6; }
-OLD_CFLAGS="$CFLAGS"
-CFLAGS="$CFLAGS $COMP_OPT"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+	OLD_CFLAGS="$CFLAGS"
+	CFLAGS="$CFLAGS $COMP_OPT"
+	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-test() {
-return 1;
-}
+test(){return 1;}
 int
 main (void)
 {
@@ -4392,14 +4376,14 @@ else $as_nop
   COMP_OPT_SUPPORT="no"
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $COMP_OPT_SUPPORT" >&5
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $COMP_OPT_SUPPORT" >&5
 printf "%s\n" "$COMP_OPT_SUPPORT" >&6; }
-if test "$COMP_OPT_SUPPORT" != "yes"
+	if test "$COMP_OPT_SUPPORT" != "yes"
 then :
   CFLAGS="$OLD_CFLAGS"
 fi
 
-if test "$COMP_OPT_SUPPORT" != "yes"
+		if test "$COMP_OPT_SUPPORT" != "yes"
 then :
   cf_use_stackprotect="no"
 fi
@@ -4603,7 +4587,7 @@ fi
 if test "$cf_use_poll" != "no"
 then :
 
-ac_fn_c_check_func "$LINENO" "poll" "ac_cv_func_poll"
+	ac_fn_c_check_func "$LINENO" "poll" "ac_cv_func_poll"
 if test "x$ac_cv_func_poll" = xyes
 then :
   printf "%s\n" "#define HAVE_POLL 1" >>confdefs.h
@@ -4656,7 +4640,7 @@ fi
 if test "$cf_use_epoll" != "no"
 then :
 
-ac_fn_c_check_header_compile "$LINENO" "sys/epoll.h" "ac_cv_header_sys_epoll_h" "$ac_includes_default"
+  ac_fn_c_check_header_compile "$LINENO" "sys/epoll.h" "ac_cv_header_sys_epoll_h" "$ac_includes_default"
 if test "x$ac_cv_header_sys_epoll_h" = xyes
 then :
   cf_use_epoll=yes
@@ -4664,10 +4648,10 @@ else $as_nop
   cf_use_epoll=no
 fi
 
-if test "$cf_use_epoll" == "yes"
+    if test "$cf_use_epoll" == "yes"
 then :
 
-ac_fn_c_check_func "$LINENO" "epoll_create1" "ac_cv_func_epoll_create1"
+			ac_fn_c_check_func "$LINENO" "epoll_create1" "ac_cv_func_epoll_create1"
 if test "x$ac_cv_func_epoll_create1" = xyes
 then :
   printf "%s\n" "#define HAVE_EPOLL 1" >>confdefs.h
@@ -4694,7 +4678,7 @@ fi
 if test "$cf_use_sendfile" != "no"
 then :
 
-ac_fn_c_check_header_compile "$LINENO" "sys/sendfile.h" "ac_cv_header_sys_sendfile_h" "$ac_includes_default"
+    ac_fn_c_check_header_compile "$LINENO" "sys/sendfile.h" "ac_cv_header_sys_sendfile_h" "$ac_includes_default"
 if test "x$ac_cv_header_sys_sendfile_h" = xyes
 then :
   cf_use_sendfile=yes
@@ -4702,10 +4686,10 @@ else $as_nop
   cf_use_sendfile=no
 fi
 
-if test "$cf_use_sendfile" == "yes"
+    if test "$cf_use_sendfile" == "yes"
 then :
 
-ac_fn_c_check_func "$LINENO" "sendfile" "ac_cv_func_sendfile"
+			ac_fn_c_check_func "$LINENO" "sendfile" "ac_cv_func_sendfile"
 if test "x$ac_cv_func_sendfile" = xyes
 then :
   printf "%s\n" "#define HAVE_SENDFILE 1" >>confdefs.h
@@ -4732,7 +4716,7 @@ fi
 if test "$cf_use_sys_random" != "no"
 then :
 
-printf "%s\n" "#define HAVE_SYS_RANDOM 1" >>confdefs.h
+    printf "%s\n" "#define HAVE_SYS_RANDOM 1" >>confdefs.h
 
 
 fi
@@ -4748,7 +4732,7 @@ fi
 if test "$have_netfilter_ipv4" = "yes"
 then :
 
-printf "%s\n" "#define HAVE_LINUX_NETFILTER_IPV4_H 1" >>confdefs.h
+    printf "%s\n" "#define HAVE_LINUX_NETFILTER_IPV4_H 1" >>confdefs.h
 
 
 fi
@@ -4767,7 +4751,7 @@ fi
 if test "$cf_use_ip6" = "yes"
 then :
 
-printf "%s\n" "#define USE_INET6 1" >>confdefs.h
+    printf "%s\n" "#define USE_INET6 1" >>confdefs.h
 
 
 fi
@@ -4785,7 +4769,7 @@ fi
 if test "$cf_use_xattr" = "yes"
 then :
 
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for getxattr in -lc" >&5
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for getxattr in -lc" >&5
 printf %s "checking for getxattr in -lc... " >&6; }
 if test ${ac_cv_lib_c_getxattr+y}
 then :
@@ -4828,11 +4812,11 @@ then :
 
 fi
 
-cf_have_getxattr=$ac_cv_lib_c_getxattr
-if test "$cf_have_getxattr" = "yes"
+    cf_have_getxattr=$ac_cv_lib_c_getxattr
+    if test "$cf_have_getxattr" = "yes"
 then :
 
-printf "%s\n" "#define HAVE_XATTR 1" >>confdefs.h
+	printf "%s\n" "#define HAVE_XATTR 1" >>confdefs.h
 
 
 fi
@@ -4851,7 +4835,7 @@ fi
 if test "$cf_use_fsflags" = "yes"
 then :
 
-ac_fn_c_check_header_compile "$LINENO" "linux/fs.h" "ac_cv_header_linux_fs_h" "$ac_includes_default"
+    ac_fn_c_check_header_compile "$LINENO" "linux/fs.h" "ac_cv_header_linux_fs_h" "$ac_includes_default"
 if test "x$ac_cv_header_linux_fs_h" = xyes
 then :
   cf_have_fsflags=yes
@@ -4863,7 +4847,7 @@ fi
 if test "$cf_have_fsflags" = "yes"
 then :
 
-printf "%s\n" "#define USE_FSFLAGS 1" >>confdefs.h
+    printf "%s\n" "#define USE_FSFLAGS 1" >>confdefs.h
 
 
 fi
@@ -4882,7 +4866,7 @@ fi
 if test "$cf_use_lgpl" = "yes"
 then :
 
-cf_use_crc32=no
+	  cf_use_crc32=no
 
 fi
 
@@ -4890,7 +4874,7 @@ fi
 if test "$cf_use_crc32" = "yes"
 then :
 
-printf "%s\n" "#define USE_CRC32 1" >>confdefs.h
+    printf "%s\n" "#define USE_CRC32 1" >>confdefs.h
 
 
 fi
@@ -4910,7 +4894,7 @@ fi
 if test "$cf_use_md5" = "yes"
 then :
 
-printf "%s\n" "#define USE_MD5 1" >>confdefs.h
+    printf "%s\n" "#define USE_MD5 1" >>confdefs.h
 
 
 fi
@@ -4930,7 +4914,7 @@ fi
 if test "$cf_use_lgpl" = "yes"
 then :
 
-cf_use_sha1=no
+	  cf_use_sha1=no
 
 fi
 
@@ -4938,7 +4922,7 @@ fi
 if test "$cf_use_sha1" = "yes"
 then :
 
-printf "%s\n" "#define USE_SHA1 1" >>confdefs.h
+    printf "%s\n" "#define USE_SHA1 1" >>confdefs.h
 
 
 fi
@@ -4956,7 +4940,7 @@ fi
 if test "$cf_use_sha2" = "yes"
 then :
 
-printf "%s\n" "#define USE_SHA2 1" >>confdefs.h
+    printf "%s\n" "#define USE_SHA2 1" >>confdefs.h
 
 
 fi
@@ -4973,7 +4957,7 @@ fi
 if test "$cf_use_whirl" = "yes"
 then :
 
-printf "%s\n" "#define USE_WHIRL 1" >>confdefs.h
+    printf "%s\n" "#define USE_WHIRL 1" >>confdefs.h
 
 
 fi
@@ -4993,7 +4977,7 @@ fi
 if test "$cf_use_jh" = "yes"
 then :
 
-printf "%s\n" "#define USE_JH 1" >>confdefs.h
+    printf "%s\n" "#define USE_JH 1" >>confdefs.h
 
 
 fi
@@ -5013,7 +4997,7 @@ fi
 if test "$cf_use_namespaces" = "yes"
 then :
 
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for unshare in -lc" >&5
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for unshare in -lc" >&5
 printf %s "checking for unshare in -lc... " >&6; }
 if test ${ac_cv_lib_c_unshare+y}
 then :
@@ -5056,15 +5040,15 @@ then :
 
 fi
 
-cf_have_unshare=$ac_cv_lib_c_unshare
-if test "$cf_have_unshare" = "yes"
+    cf_have_unshare=$ac_cv_lib_c_unshare
+    if test "$cf_have_unshare" = "yes"
 then :
 
-printf "%s\n" "#define HAVE_UNSHARE 1" >>confdefs.h
+        printf "%s\n" "#define HAVE_UNSHARE 1" >>confdefs.h
 
 
 fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for setns in -lc" >&5
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for setns in -lc" >&5
 printf %s "checking for setns in -lc... " >&6; }
 if test ${ac_cv_lib_c_setns+y}
 then :
@@ -5107,11 +5091,11 @@ then :
 
 fi
 
-cf_have_setns=$ac_cv_lib_c_setns
-if test "$cf_have_setns" = "yes"
+    cf_have_setns=$ac_cv_lib_c_setns
+    if test "$cf_have_setns" = "yes"
 then :
 
-printf "%s\n" "#define HAVE_SETNS 1" >>confdefs.h
+	printf "%s\n" "#define HAVE_SETNS 1" >>confdefs.h
 
 
 fi
@@ -5124,7 +5108,7 @@ if test ${enable_ssl+y}
 then :
   enableval=$enable_ssl; cf_use_ssl=$enableval
 else $as_nop
-  cf_use_ssl=no
+  cf_use_ssl=yes
 
 fi
 
@@ -5344,20 +5328,20 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 if test "$cf_use_ssl" = "yes"
 then :
 
-ac_fn_c_check_header_compile "$LINENO" "openssl/crypto.h" "ac_cv_header_openssl_crypto_h" "$ac_includes_default"
+    ac_fn_c_check_header_compile "$LINENO" "openssl/crypto.h" "ac_cv_header_openssl_crypto_h" "$ac_includes_default"
 if test "x$ac_cv_header_openssl_crypto_h" = xyes
 then :
 
 fi
 
-ac_fn_c_check_header_compile "$LINENO" "openssl/ssl.h" "ac_cv_header_openssl_ssl_h" "$ac_includes_default"
+    ac_fn_c_check_header_compile "$LINENO" "openssl/ssl.h" "ac_cv_header_openssl_ssl_h" "$ac_includes_default"
 if test "x$ac_cv_header_openssl_ssl_h" = xyes
 then :
 
 fi
 
 
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for EVP_CIPHER_CTX_init in -lcrypto" >&5
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for EVP_CIPHER_CTX_init in -lcrypto" >&5
 printf %s "checking for EVP_CIPHER_CTX_init in -lcrypto... " >&6; }
 if test ${ac_cv_lib_crypto_EVP_CIPHER_CTX_init+y}
 then :
@@ -5400,12 +5384,12 @@ then :
 
 fi
 
-cf_have_libcrypto=$ac_cv_lib_crypto_EVP_CIPHER_CTX_init
+    cf_have_libcrypto=$ac_cv_lib_crypto_EVP_CIPHER_CTX_init
 
-if test "$cf_have_libcrypto" != "yes"
+        if test "$cf_have_libcrypto" != "yes"
 then :
 
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for EVP_CIPHER_CTX_new in -lcrypto" >&5
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for EVP_CIPHER_CTX_new in -lcrypto" >&5
 printf %s "checking for EVP_CIPHER_CTX_new in -lcrypto... " >&6; }
 if test ${ac_cv_lib_crypto_EVP_CIPHER_CTX_new+y}
 then :
@@ -5448,12 +5432,12 @@ then :
 
 fi
 
-cf_have_libcrypto=$ac_cv_lib_crypto_EVP_CIPHER_CTX_new
+	cf_have_libcrypto=$ac_cv_lib_crypto_EVP_CIPHER_CTX_new
 
 fi
 
 
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for SSL_library_init in -lssl" >&5
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for SSL_library_init in -lssl" >&5
 printf %s "checking for SSL_library_init in -lssl... " >&6; }
 if test ${ac_cv_lib_ssl_SSL_library_init+y}
 then :
@@ -5496,12 +5480,12 @@ then :
 
 fi
 
-cf_have_libssl=$ac_cv_lib_ssl_SSL_library_init
+    cf_have_libssl=$ac_cv_lib_ssl_SSL_library_init
 
-if test "$cf_have_libssl" != "yes"
+        if test "$cf_have_libssl" != "yes"
 then :
 
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for OPENSSL_init_ssl in -lssl" >&5
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for OPENSSL_init_ssl in -lssl" >&5
 printf %s "checking for OPENSSL_init_ssl in -lssl... " >&6; }
 if test ${ac_cv_lib_ssl_OPENSSL_init_ssl+y}
 then :
@@ -5544,17 +5528,17 @@ then :
 
 fi
 
-cf_have_libssl=$ac_cv_lib_ssl_OPENSSL_init_ssl
+	cf_have_libssl=$ac_cv_lib_ssl_OPENSSL_init_ssl
 
 fi
 
 
-if test "$cf_have_libssl" = "yes"
+    if test "$cf_have_libssl" = "yes"
 then :
 
-cf_use_zlib=yes
+	cf_use_zlib=yes
 
-ac_fn_c_check_func "$LINENO" "OpenSSL_add_all_algorithms" "ac_cv_func_OpenSSL_add_all_algorithms"
+	ac_fn_c_check_func "$LINENO" "OpenSSL_add_all_algorithms" "ac_cv_func_OpenSSL_add_all_algorithms"
 if test "x$ac_cv_func_OpenSSL_add_all_algorithms" = xyes
 then :
   printf "%s\n" "#define HAVE_OPENSSL_ADD_ALL_ALGORITHMS 1" >>confdefs.h
@@ -5647,7 +5631,7 @@ fi
 
 
 
-ac_fn_check_decl "$LINENO" "OpenSSL_add_all_algorithms" "ac_cv_have_decl_OpenSSL_add_all_algorithms" "#include <openssl/ssl.h>
+	ac_fn_check_decl "$LINENO" "OpenSSL_add_all_algorithms" "ac_cv_have_decl_OpenSSL_add_all_algorithms" "#include <openssl/ssl.h>
 " "$ac_c_undeclared_builtin_options" "CFLAGS"
 if test "x$ac_cv_have_decl_OpenSSL_add_all_algorithms" = xyes
 then :
@@ -5662,7 +5646,7 @@ then :
 
 fi
 
-ac_fn_check_decl "$LINENO" "SSL_set_tlsext_host_name" "ac_cv_have_decl_SSL_set_tlsext_host_name" "#include <openssl/ssl.h>
+	ac_fn_check_decl "$LINENO" "SSL_set_tlsext_host_name" "ac_cv_have_decl_SSL_set_tlsext_host_name" "#include <openssl/ssl.h>
 " "$ac_c_undeclared_builtin_options" "CFLAGS"
 if test "x$ac_cv_have_decl_SSL_set_tlsext_host_name" = xyes
 then :
@@ -5678,28 +5662,28 @@ then :
 fi
 
 
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking that OpenSSL Library is at least version 0.9.7" >&5
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking that OpenSSL Library is at least version 0.9.7" >&5
 printf %s "checking that OpenSSL Library is at least version 0.9.7... " >&6; }
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
-#include <openssl/evp.h>
-#if SSLEAY_VERSION_NUMBER >= 0x00907000L
-yes
-#endif
+		#include <openssl/evp.h>
+		#if SSLEAY_VERSION_NUMBER >= 0x00907000L
+		yes
+		#endif
 
 _ACEOF
 if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
   $EGREP "yes" >/dev/null 2>&1
 then :
 
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+		{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 printf "%s\n" "yes" >&6; }
-# AC_DEFINE(USE_OPENSSL_ADD_ALL_ALGORITHMS, 1, [Use OpenSSL_add_all_algorithms])
+	# AC_DEFINE(USE_OPENSSL_ADD_ALL_ALGORITHMS, 1, [Use OpenSSL_add_all_algorithms])
 
 else $as_nop
 
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+	    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
 
 fi
@@ -5717,14 +5701,14 @@ if test ${enable_zlib+y}
 then :
   enableval=$enable_zlib; cf_use_zlib=$enableval
 else $as_nop
-  cf_use_zlib=no
+  cf_use_zlib=yes
 
 fi
 
 if test "$cf_use_zlib" = "yes" -o "$cf_use_ssl" = "yes"
 then :
 
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for deflate in -lz" >&5
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for deflate in -lz" >&5
 printf %s "checking for deflate in -lz... " >&6; }
 if test ${ac_cv_lib_z_deflate+y}
 then :
@@ -5767,7 +5751,7 @@ then :
 
 fi
 
-cf_have_libz=$ac_cv_lib_z_deflate
+    cf_have_libz=$ac_cv_lib_z_deflate
 
 fi
 
@@ -5804,7 +5788,7 @@ fi
 if test "$cf_use_backtrace" != "no"
 then :
 
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for backtrace_symbols in -lc" >&5
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for backtrace_symbols in -lc" >&5
 printf %s "checking for backtrace_symbols in -lc... " >&6; }
 if test ${ac_cv_lib_c_backtrace_symbols+y}
 then :
@@ -5842,9 +5826,9 @@ printf "%s\n" "$ac_cv_lib_c_backtrace_symbols" >&6; }
 if test "x$ac_cv_lib_c_backtrace_symbols" = xyes
 then :
 
-printf "%s\n" "#define HAVE_BACKTRACE 1" >>confdefs.h
+          printf "%s\n" "#define HAVE_BACKTRACE 1" >>confdefs.h
 
-BACKTRACE_CFLAGS="-rdynamic"
+	  BACKTRACE_CFLAGS="-rdynamic"
 
 
 fi
@@ -5867,13 +5851,13 @@ fi
 if test "$cf_use_capabilities" = "yes"
 then :
 
-ac_fn_c_check_header_compile "$LINENO" "sys/capability.h" "ac_cv_header_sys_capability_h" "$ac_includes_default"
+    ac_fn_c_check_header_compile "$LINENO" "sys/capability.h" "ac_cv_header_sys_capability_h" "$ac_includes_default"
 if test "x$ac_cv_header_sys_capability_h" = xyes
 then :
   cf_have_capabilities=yes
 fi
 
-ac_fn_c_check_header_compile "$LINENO" "linux/capability.h" "ac_cv_header_linux_capability_h" "$ac_includes_default"
+    ac_fn_c_check_header_compile "$LINENO" "linux/capability.h" "ac_cv_header_linux_capability_h" "$ac_includes_default"
 if test "x$ac_cv_header_linux_capability_h" = xyes
 then :
   cf_have_capabilities=yes
@@ -5885,7 +5869,7 @@ fi
 if test "$cf_have_capabilities" = "yes"
 then :
 
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for cap_init in -lcap" >&5
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for cap_init in -lcap" >&5
 printf %s "checking for cap_init in -lcap... " >&6; }
 if test ${ac_cv_lib_cap_cap_init+y}
 then :
@@ -5928,7 +5912,7 @@ then :
 
 fi
 
-printf "%s\n" "#define USE_CAPABILITIES 1" >>confdefs.h
+    printf "%s\n" "#define USE_CAPABILITIES 1" >>confdefs.h
 
 
 fi
@@ -5948,7 +5932,7 @@ fi
 if test "$cf_use_seccomp" = "yes"
 then :
 
-ac_fn_c_check_header_compile "$LINENO" "linux/seccomp.h" "ac_cv_header_linux_seccomp_h" "$ac_includes_default"
+    ac_fn_c_check_header_compile "$LINENO" "linux/seccomp.h" "ac_cv_header_linux_seccomp_h" "$ac_includes_default"
 if test "x$ac_cv_header_linux_seccomp_h" = xyes
 then :
 
@@ -5956,7 +5940,7 @@ else $as_nop
   cf_use_seccomp=no
 fi
 
-ac_fn_c_check_header_compile "$LINENO" "linux/filter.h" "ac_cv_header_linux_filter_h" "$ac_includes_default"
+    ac_fn_c_check_header_compile "$LINENO" "linux/filter.h" "ac_cv_header_linux_filter_h" "$ac_includes_default"
 if test "x$ac_cv_header_linux_filter_h" = xyes
 then :
 
@@ -5964,7 +5948,7 @@ else $as_nop
   cf_use_seccomp=no
 fi
 
-ac_fn_c_check_header_compile "$LINENO" "linux/bpf.h" "ac_cv_header_linux_bpf_h" "$ac_includes_default"
+    ac_fn_c_check_header_compile "$LINENO" "linux/bpf.h" "ac_cv_header_linux_bpf_h" "$ac_includes_default"
 if test "x$ac_cv_header_linux_bpf_h" = xyes
 then :
 
@@ -5972,7 +5956,7 @@ else $as_nop
   cf_use_seccomp=no
 fi
 
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for prctl in -lc" >&5
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for prctl in -lc" >&5
 printf %s "checking for prctl in -lc... " >&6; }
 if test ${ac_cv_lib_c_prctl+y}
 then :
@@ -6033,17 +6017,17 @@ else $as_nop
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
-#include <stdlib.h>
-#include "linux/bpf.h"
+	#include <stdlib.h>
+	#include "linux/bpf.h"
 
 int
 main (void)
 {
 
-#ifdef BPF_JLT
-exit(0);
-#endif
-exit(1)
+	#ifdef BPF_JLT
+	exit(0);
+	#endif
+	exit(1)
 
   ;
   return 0;
@@ -6063,17 +6047,17 @@ fi
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $have_BPF_JLT" >&5
 printf "%s\n" "$have_BPF_JLT" >&6; }
 
-if test "$have_BPF_JLT" = "yes"
+    if test "$have_BPF_JLT" = "yes"
 then :
 
 else $as_nop
   cf_use_seccomp=no
 fi
 
-if test "$cf_use_seccomp" = "yes"
+    if test "$cf_use_seccomp" = "yes"
 then :
 
-printf "%s\n" "#define USE_SECCOMP 1" >>confdefs.h
+	printf "%s\n" "#define USE_SECCOMP 1" >>confdefs.h
 
 
 fi
@@ -7249,22 +7233,22 @@ echo "CFLAGS=$CFLAGS"
 if test "$ac_cv_sys_file_offset_bits" = "64"
 then :
 
-echo "Largefiles ( > 2GB on 32bit x86) enabled"
+    echo "Largefiles ( > 2GB on 32bit x86) enabled"
 
 else $as_nop
 
-echo "Largefiles ( > 2GB on 32bit x86) NOT enabled"
+    echo "Largefiles ( > 2GB on 32bit x86) NOT enabled"
 
 fi
 
 if test "$cf_have_getxattr" = "yes"
 then :
 
-echo "Filesystem attribues (xattr) enabled"
+    echo "Filesystem attribues (xattr) enabled"
 
 else $as_nop
 
-echo "Filesystem attribues (xattr) NOT enabled"
+    echo "Filesystem attribues (xattr) NOT enabled"
 
 fi
 
@@ -7272,33 +7256,33 @@ fi
 if test "$ac_cv_func_sendfile" = "yes"
 then :
 
-echo "Linux sendfile syscall enabled"
+    echo "Linux sendfile syscall enabled"
 
 else $as_nop
 
-echo "Linux sendfile syscall NOT enabled"
+    echo "Linux sendfile syscall NOT enabled"
 
 fi
 
 if test "$ac_cv_func_poll" = "yes"
 then :
 
-echo "Using 'poll' rather than 'select' for IO polling"
+    echo "Using 'poll' rather than 'select' for IO polling"
 
 else $as_nop
 
-echo "using 'select' for IO polling"
+    echo "using 'select' for IO polling"
 
 fi
 
 if test "$cf_use_epoll" == "yes"
 then :
 
-echo "Using 'epoll' in STREAMSelect"
+    echo "Using 'epoll' in STREAMSelect"
 
 else $as_nop
 
-echo "not using 'epoll'"
+    echo "not using 'epoll'"
 
 fi
 
@@ -7306,44 +7290,44 @@ fi
 if test "$cf_use_ip6" = "yes"
 then :
 
-echo "IPv6 enabled"
+    echo "IPv6 enabled"
 
 else $as_nop
 
-echo "IPv6 NOT enabled"
+    echo "IPv6 NOT enabled"
 
 fi
 
 if test "$cf_have_libssl" = "yes"
 then :
 
-echo "SSL/TLS enabled"
+    echo "SSL/TLS enabled"
 
 else $as_nop
 
-echo "SSL/TLS NOT enabled"
+    echo "SSL/TLS NOT enabled"
 
 fi
 
 if test "$cf_have_libz" = "yes"
 then :
 
-echo "zlib support enabled"
+    echo "zlib support enabled"
 
 else $as_nop
 
-echo "zlib NOT enabled"
+    echo "zlib NOT enabled"
 
 fi
 
 if test "$cf_use_crc32" = "yes"
 then :
 
-echo "crc32 hash support enabled"
+    echo "crc32 hash support enabled"
 
 else $as_nop
 
-echo "crc32 hash NOT enabled"
+    echo "crc32 hash NOT enabled"
 
 fi
 
@@ -7351,55 +7335,55 @@ fi
 if test "$cf_use_md5" = "yes"
 then :
 
-echo "md5 hash support enabled"
+    echo "md5 hash support enabled"
 
 else $as_nop
 
-echo "md5 hash NOT enabled"
+    echo "md5 hash NOT enabled"
 
 fi
 
 if test "$cf_use_sha1" = "yes"
 then :
 
-echo "sha1 hash support enabled"
+    echo "sha1 hash support enabled"
 
 else $as_nop
 
-echo "sha1 hash NOT enabled"
+    echo "sha1 hash NOT enabled"
 
 fi
 
 if test "$cf_use_sha2" = "yes"
 then :
 
-echo "sha2 hash support enabled"
+    echo "sha2 hash support enabled"
 
 else $as_nop
 
-echo "sha2 hash NOT enabled"
+    echo "sha2 hash NOT enabled"
 
 fi
 
 if test "$cf_use_whirl" = "yes"
 then :
 
-echo "whirl hash support enabled"
+    echo "whirl hash support enabled"
 
 else $as_nop
 
-echo "whirl hash NOT enabled"
+    echo "whirl hash NOT enabled"
 
 fi
 
 if test "$cf_use_jh" = "yes"
 then :
 
-echo "jh hash support enabled"
+    echo "jh hash support enabled"
 
 else $as_nop
 
-echo "jh hash NOT enabled"
+    echo "jh hash NOT enabled"
 
 fi
 
@@ -7407,55 +7391,55 @@ fi
 if test "$cf_have_fsflags" = "yes"
 then :
 
-echo "support for FS_APPEND_FL and FS_IMMUTABLE_FL flags and hardened logs enabled"
+    echo "support for FS_APPEND_FL and FS_IMMUTABLE_FL flags and hardened logs enabled"
 
 else $as_nop
 
-echo "support for FS_APPEND_FL and FS_IMMUTABLE_FL flags and hardened logs NOT enabled"
+    echo "support for FS_APPEND_FL and FS_IMMUTABLE_FL flags and hardened logs NOT enabled"
 
 fi
 
 if test "$cf_have_unshare" = "yes" -o "$cf_have_setns" = "yes"
 then :
 
-echo "linux namespace support enabled"
+    echo "linux namespace support enabled"
 
 else $as_nop
 
-echo "linux namespace support NOT enabled"
+    echo "linux namespace support NOT enabled"
 
 fi
 
 if test "$cf_have_capabilities" = "yes"
 then :
 
-echo "linux capabilities support enabled"
+    echo "linux capabilities support enabled"
 
 else $as_nop
 
-echo "linux capabilities support NOT enabled"
+    echo "linux capabilities support NOT enabled"
 
 fi
 
 if test "$cf_use_seccomp" = "yes"
 then :
 
-echo "linux seccomp support enabled"
+    echo "linux seccomp support enabled"
 
 else $as_nop
 
-echo "linux seccomp support NOT enabled"
+    echo "linux seccomp support NOT enabled"
 
 fi
 
 if test "$cf_use_backtrace" = "yes"
 then :
 
-echo "linux backtrace support enabled"
+    echo "linux backtrace support enabled"
 
 else $as_nop
 
-echo "linux backtrace support NOT enabled"
+    echo "linux backtrace support NOT enabled"
 
 fi
 

@@ -1,4 +1,5 @@
 
+
 SYNOPSIS
 =======
 
@@ -11,11 +12,6 @@ Crayonizer is an application that modifies the output of other text programs. It
 * Setting terminal background color upon to hostname upon ssh-ing to a particular host
 * Extracting 'now playing' information from mpg123 or mplayer
 * Adding 'typing history' bars to programs that lack this feature
-
-
-VERSION
-========
-2.4 
 
 
 AUTHOR
@@ -124,7 +120,7 @@ Crayonizer uses a config file to configure its behavior. It will look for config
 
 Note the leading '.' for entries in the user home directory, this is so they are 'hidden' in a normal 'ls' listing of the directory.
 
-The crayonizer config file MUST contain a 'CrayonizerDir' entry so crayonizer knows where it lives so that it can avoid starting itself. If crayonizer spawns itself, the results will be really bad, because the new crayonize process will also spawn itself, as will the next, and the next, and the next (it's the programmatic equivalent from that scene from Disney's Fantasia where Mickey creates all the golem brooms). This is called a 'forkbomb' and it can take down some systems by filling up their process tables. Since version 1.0 crayonizer tries to prevent this by setting an environment variable that tells child processes that there's already a crayonizer running, so don't start up any more. However, in some situations, like when crayonizer is used to crayonize a terminal, this feature is explicitly switched off, in which case the 'CrayonizerDir' environment variable is all that stands in the way of a forkbombing.
+The crayonizer config file MUST contain a 'CrayonizerDir' entry so crayonizer knows where it lives so that it can avoid starting itself. If crayonizer spawns itself, the results will be really bad, because the new crayonize process will also spawn itself, as will the next, and the next, and the next (it's the programmatic equivalent from that scene from Disney's Fantasia where Mickey creates all the golem brooms). This is called a 'forkbomb' and it can take down some systems by filling up their processs tables. Since version 1.0 crayonizer tries to prevent this by setting an environment variable that tells child processes that there's already a crayonizer running, so don't start up any more. However, in some situations, like when crayonizer is used to crayonize a terminal, this feature is explicitly switched off, in which case the 'CrayonizerDir' environment variable is all that stands in the way of a forkbombing.
 
 The config file also contains 'entry' sections for each program that you want to crayonize. These contain either settings related to running/crayonizing the program, or 'crayonization' lines of the form '<action type> <pattern match> <crayonizations> 
 
@@ -190,6 +186,12 @@ Allow child processes to run crayonizers. By default a crayonizer process sets a
 ```
 
 Allow a child process to switch user (particularly switch user to root). Without this setting commands like 'su', 'sudo' and 'ping' will not work, because they require raised priviledges. This is a security measure applied by default in crayonizer after v2.6.
+
+```
+		security <setup>
+```
+
+Define a security environment for the application using 'seccomp', 'namespaces' and other linux security features. See 'SECURITY' below.
 
 
 
@@ -842,6 +844,115 @@ you would probably use 'timer' with a function call like so:
 		}
 
 		timer 10 call EveryTenSecs
+```
+
+
+
+SECURITY
+========
+
+The 'security' config line allows one to specify a security setup for an application. This consists of a list of keywords seperated by spaces, or by '+'. Most of these settings relate to seccomp, or namespaces under linux. Some keywords apply both namespace and seccomp rules as a 'belt and brace' approach, so that if a system lacks namespace support, or lacks seccomp support, the security can still be applied by using the other approach. 
+
+## Seccomp 
+
+Seccomp is a linux security feature that blocks access to certain syscalls, either returning EPERM to indicate a syscall is not allowed, or else killing the app when a disallowed syscall is used. Individual syscalls can be allowed, denied or killed using the "syscall_allow", "syscall_deny" and "syscall_kill" options:
+
+```
+security syscall_allow=ioctl(term) syscall_kill=ioctl(danger) syscall_deny=ioctl
+```
+
+The order of options matters here. 'syscall_deny=ioctl' applies to all instances of the syscall 'ioctl', thus the 'syscall_allow' and 'syscall_kill' options have to go before it, so that they will be selected if they match rather than the global 'ioctl' match.
+
+However, specifying syscalls can be very laborious, so a system of 'seccomp levels' is provided. Each seccomp level includes all the features of levels below it. Available levels are:
+
+        minimal: disable ptrace and kill apps that try to use: personality, uselib, userfaultfd, perf_event_open, kexec_load, get_kernel_syms, lookup_dcookie, vm86, vm86old, mbind, move_pages, nfsservctl, and anything involving kernel modules. Deny use of the TIOCSTI ioctl.
+
+        basic: everything in 'minimal' but also disable the 'acct' and 'capset' syscalls
+
+        user: everything in 'basic' but also kill processes that try to use bpf, or any 'sysadmin' calls: settimeofday, clocksettime, clockadjtime, quotactl, reboot, swapon, swapoff, mount, umount, umount2, mknod, quotactl capset or that try to use the TIOCSTI ioctl. Deny creating files with the suid bit set.
+
+        guest: everything in 'user' but deny access to they keyring and kill apps that try to use ptrace
+
+        untrusted: everything in 'user' but kill apps that try to: chroot, acct syscall, pidfd_open syscall, access the keyring, or unshare or change namespaces. Deny use of utimes syscall to change file timestamps.
+
+        constrained: everything in 'untrusted' but deny using most ioctls. Kill attempted use of utimes to change filesystem times.
+
+        high: everything in 'constrained' plus deny sending signals with 'kill' or changing linking or symlinking files, or settings files to have the 'executable' permission
+
+        paranoid: everyting in 'high' but kill processes that try to use exec to load another program, or that try to link or symlink to files, or change file timestamps, or that try to send signals
+
+        worker: everything in 'paranoid' plus deny making any filesystem changes. Intended for processes that just do calculations and write them to a file
+
+        memworker: everything in 'worker' plus kill attempted use of 'open' or other filesystem calls. Intended for processes that just do calculations and write them to an existing file descriptor (e.g. stdout).
+
+
+Levels are configured like so:
+
+```
+security constrained
+```
+
+
+In addition to levels there are 'modifiers'. These can be combined with levels to block specific types of behavior at any level. Available modifiers are:
+
+        local: only allow UNIX sockets/networking. WARNING: this modifier only works on x86_64, not on x86 due to issues with socketcall syscall
+
+        basic-net: only allow unix, inet (IPv4) and inet6 (IPv6) sockets/networking, disabling all 'weird' address families including AF_BLUETOOTH, AF_VSOCK and AF_ALG. WARNING: this modifier only works on x86_64, not on x86 due to issues with socketcall syscall
+
+        lan: only allow connections to devices on the same ethernet segment. This doesn't use seccomp, but instead causes all sockets to be opened with the SO_DONTROUTE flag set.
+
+        client: deny syscalls: listen and accept, preventing 'server' activity
+
+        nonet: use namespaces to prevent network access AND/OR SECCOMP to deny networking syscalls like socket,bind and connect
+
+        killnet: kill processes that attempt to use networking syscalls like socket,bind and connect
+
+        netns: use namespaces to prevent access to network
+
+        nopid: use namespaces AND/OR SECCOMP to prevent access to other processes, sending signals or even seeing what processes are running (deny 'kill' syscall)
+
+        pidns: use namespaces to prevent access to other processes, sending signals or even seeing what processes are running
+
+        noipc: use namespace AND/OR SECCOMP to isolate posix IPC (deny syscalls included in both 'noshm' and 'nomsgq' above along with syscalls: semop, semget and semctl)
+
+        ipcns: use namespaces to prevent access to posix IPC (shared memory, message queues and semaphores)
+
+        noinit: when using a PID namespace, don't create an 'init' process for it, just run the main process in the namespace
+
+        noshm: deny 'shared memory' syscalls: shmat, shmdt, shmget and shmctl
+
+        nomsgq: deny 'message queues' syscalls: msgrcv, msgsnd, msgget, and msgctl
+
+        noexec: deny use of exec family of programs to load another program
+
+        killexec: kill processes that attempt to use exec to load another program
+
+
+
+## Namespaces
+
+Namespaces are a linux security feature that allows isolating a process from system resources. Supported namespace keywords are:
+
+      nonet: use namespaces to prevent network access AND/OR SECCOMP to deny networking syscalls like socket,bind and connect
+      killnet: kill processes that attempt to use networking syscalls like socket,bind and connect
+      netns: use namespaces to prevent access to network
+      nopid: use namespaces AND/OR SECCOMP to prevent access to other processes, sending signals or even seeing what processes are running (deny 'kill' syscall)
+      pidns: use namespaces to prevent access to other processes, sending signals or even seeing what processes are running
+      noipc: use namespace AND/OR SECCOMP to isolate posix IPC (deny syscalls included in both 'noshm' and 'nomsgq' above along with syscalls: semop, semget and semctl)
+      ipcns: use namespaces to prevent access to posix IPC (shared memory, message queues and semaphores)
+      noinit: when using a PID namespace, don't create an 'init' process for it, just run the main process in the namespace
+
+
+All these features can be put together like so:
+
+```
+security syscall_allow=shmat;shmdt;shmget;shmctl constrained noipc nonet nopid
+```
+
+or
+
+```
+security syscall_allow=shmat;shmdt;shmget;shmctl constrained+noipc+nonet+nopid
 ```
 
 

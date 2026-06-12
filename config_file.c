@@ -86,7 +86,7 @@ static int CrayonType(const char *String)
     if (! StrValid(String)) return(-1);
     if (*String=='#') return(-1);
     val=MatchTokenFromList(String, CrayonTypes, 0);
-    if (val==-1) val=0;
+
     return(val);
 }
 
@@ -338,9 +338,9 @@ const char *ParseActionToken(const char *Operations, TCrayon *Crayon)
     ptr=Operations;
 
     Action=NewCrayonAction(Crayon,0);
-    while (StrLen(ptr))
+    while (StrValid(ptr))
     {
-        nptr=GetToken(ptr,"\\S",&Token,GETTOKEN_QUOTES);
+        nptr=GetToken(ptr, "\\S", &Token, GETTOKEN_QUOTES);
 
         switch (*Token)
         {
@@ -356,7 +356,7 @@ const char *ParseActionToken(const char *Operations, TCrayon *Crayon)
             break;
 
         default:
-            nptr=ParseAttribs(ptr,Crayon,&Action);
+            nptr=ParseAttribs(ptr,Crayon, &Action);
             break;
         }
         ptr=nptr;
@@ -433,13 +433,24 @@ const char *ParseCrayonAction(TCrayon *Item, const char *Args)
 
 
 //not static, is used outside of this module
-void ParseCrayonEntry(TCrayon *Crayon, const char *Token, const char *Args)
+void ParseCrayonEntry(TCrayon *Crayon, const char *Token, const char *iArgs)
 {
     const char *ptr;
     int Type=0;
     TCrayon *CLS;
+    char *Args=NULL;
 
     Type=CrayonType(Token);
+
+    if (Type == -1)
+    {
+        if (MatchActionType(Token) > -1)
+        {
+            Type=CRAYON_ACTION;
+            Args=MCopyStr(Args, Token, " ", iArgs, NULL);
+        }
+    }
+    else Args=CopyStr(Args, iArgs);
 
     if (Type > -1)
     {
@@ -469,6 +480,7 @@ void ParseCrayonEntry(TCrayon *Crayon, const char *Token, const char *Args)
         }
     }
 
+    Destroy(Args);
 }
 
 
@@ -578,6 +590,7 @@ static void ConfigReadEntry(STREAM *S, ListNode *CrayonList)
             else if (strcasecmp(Token,"stripansi")==0) GlobalFlags |= FLAG_STRIP_ANSI;
             else if (strcasecmp(Token,"stripxtitle")==0) GlobalFlags |= FLAG_STRIP_XTITLE;
             else if (strcasecmp(Token,"command")==0) SetVar(Vars,"ReplaceCommand",ptr);
+            else if (strcasecmp(Token,"security")==0) SetVar(Vars, "security", ptr);
             else if (strcasecmp(Token,"cmdline-sub")==0)
             {
                 ptr=GetToken(ptr, "\\S", &Token, GETTOKEN_QUOTES);

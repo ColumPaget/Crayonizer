@@ -1,6 +1,6 @@
 #include "common.h"
 
-char *Version="2.6";
+char *Version="2.7";
 
 
 ListNode *Vars=NULL;

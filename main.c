@@ -26,6 +26,7 @@
 #include "config_file.h"
 #include "command_line.h"
 #include "status_bar.h"
+#include "text_substitutions.h"
 #include "timers.h"
 #include "xterm.h"
 #include "history.h"
@@ -169,6 +170,7 @@ void ProcessAppends(STREAM *Pipe, ListNode *Crayons, int Type)
 
         if (
             (Item->Type==Type) ||
+            (Item->Type==CRAYON_ACTION) ||
             (Item->Type==CRAYON_IF) ||
             (Item->Type==CRAYON_ARGS)
         )
@@ -190,6 +192,32 @@ void ProcessAppends(STREAM *Pipe, ListNode *Crayons, int Type)
 }
 
 
+void SetSecure()
+{
+    char *Secure=NULL, *Tempstr=NULL;
+    const char *ptr;
+
+		ptr=getenv("crayonizer_security");
+
+		if (! StrValid(ptr))
+		{
+    ptr=GetVar(Vars, "security");
+    if (StrValid(ptr))
+    {
+        Secure=SubstituteTextValues(Secure, ptr, 0);
+        Tempstr=MCopyStr(Tempstr, "security='", Secure, "' ", NULL);
+
+				setenv("crayonizer_security", Secure, TRUE);
+    }
+
+    if (! (GlobalFlags & FLAG_ALLOW_SU)) Tempstr=CatStr(Tempstr, "nosu");
+
+    if (StrValid(Tempstr)) ProcessApplyConfig(Tempstr);
+		}
+
+    Destroy(Tempstr);
+    Destroy(Secure);
+}
 
 
 
@@ -228,11 +256,18 @@ STREAM *LaunchCommands(int argc, char *argv[], ListNode *Matches, const char *Cr
 
     Tempstr=RebuildCommandLine(Tempstr,argc, argv, CrayonizerDir);
 
+
+    SetSecure();
+
     if (GlobalFlags & FLAG_DONTCRAYON)
     {
         //Exit after running the command
         TTYReset(0);
+
         exit(system(Tempstr));
+	//SwitchProgram(Tempstr, "");
+	//we should not get to here 
+        exit(1);
     }
 
     Pipe=STREAMSpawnCommand(Tempstr, "rw pty echo canon icrlf trust noshell, ctty");
@@ -243,6 +278,7 @@ STREAM *LaunchCommands(int argc, char *argv[], ListNode *Matches, const char *Cr
     HandleSigwinch(Pipe);
 
     Destroy(Tempstr);
+
     return(Pipe);
 }
 
@@ -308,7 +344,8 @@ void CrayonizerProcessInputs()
 void CrayonizeCommand(int argc, char *argv[])
 {
     STREAM *S;
-    char *Tempstr=NULL, *CrayonizerDir=NULL, *CmdLine=NULL;
+    char *Tempstr=NULL, *CrayonizerDir=NULL, *CmdLine=NULL, *Secure=NULL;
+    const char *ptr;
     int val, i, result;
 
     CrayonList=ListCreate();
@@ -330,8 +367,6 @@ void CrayonizeCommand(int argc, char *argv[])
             exit(1);
         }
     }
-
-    if (! (GlobalFlags & FLAG_ALLOW_SU)) ProcessApplyConfig("nosu");
 
     LoadEnvironment();
 
@@ -360,29 +395,36 @@ void CrayonizeCommand(int argc, char *argv[])
 
 
     CommandPipe=LaunchCommands(argc, argv, CrayonList, CrayonizerDir);
-    ListAddItem(Streams,CommandPipe);
-
-    CrayonizerProcessInputs();
-
-    //waitpid with WNOHANG will return 0 if there are children still running
-    //the pid of a child if it exits
-    //or -1 on any error (which includes there being no child processes)
-    //so we keep waiting and processing any signals we get until there are no children
-    while (waitpid(-1, NULL, WNOHANG) > -1)
+    if (CommandPipe)
     {
-        usleep(10000); //sleep 10 ms
-        PropagateSignals(CommandPipe);
+        ListAddItem(Streams,CommandPipe);
+
+        CrayonizerProcessInputs();
+
+        //waitpid with WNOHANG will return 0 if there are children still running
+        //the pid of a child if it exits
+        //or -1 on any error (which includes there being no child processes)
+        //so we keep waiting and processing any signals we get until there are no children
+        while (waitpid(-1, NULL, WNOHANG) > -1)
+        {
+            usleep(10000); //sleep 10 ms
+            PropagateSignals(CommandPipe);
+        }
+
+        SetDurationVariable();
+
+        ProcessAppends(CommandPipe,CrayonList,CRAYON_APPEND);
+        ProcessAppends(CommandPipe,CrayonList,CRAYON_ONEXIT);
+
+        STREAMClose(CommandPipe);
     }
+    else fprintf(stderr, "ERROR: failed to launch command '%s'\n", CmdLine);
 
-    SetDurationVariable();
-
-    ProcessAppends(CommandPipe,CrayonList,CRAYON_APPEND);
-    ProcessAppends(CommandPipe,CrayonList,CRAYON_ONEXIT);
-
-    STREAMClose(CommandPipe);
     STREAMDestroy(StdIn);
     ListDestroy(Streams,NULL);
     ListDestroy(CrayonList,free);
+
+    Destroy(Secure);
     Destroy(Tempstr);
     Destroy(CmdLine);
     Destroy(CrayonizerDir);
@@ -598,6 +640,7 @@ int main(int argc, char *argv[])
     char *ptr;
 
 
+//		LibUsefulSetValue("libUseful:Debug", "Y");
     ProcessApplyConfig("mdwe");
     cmdline_argc=argc;
     cmdline_argv=argv;

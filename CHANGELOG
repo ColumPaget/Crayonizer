@@ -1,3 +1,6 @@
+v2.7
+  * add 'security' config line, allowing use of seccomp and namespaces
+
 v2.6 (2026-04-21)
   * fix/improve "ColorOutput" to prevent lost ANSI characters
   * Add 'no su' feature and 'mdwe', both enabled by default

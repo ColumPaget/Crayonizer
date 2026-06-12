@@ -359,7 +359,7 @@ char *SubstituteTextValues(char *RetStr, const char *Text, int MaxLen)
             if (val > 0)
             {
                 RetStr=CatStr(RetStr, tptr);
-                len+=val;
+                len += val;
             }
             break;
 
@@ -370,7 +370,7 @@ char *SubstituteTextValues(char *RetStr, const char *Text, int MaxLen)
 
     }
 
-    if (StrLen(RetStr) > MaxLen) StrTrunc(RetStr, len);
+    if ((MaxLen > 0) && (StrLen(RetStr) > MaxLen)) StrTrunc(RetStr, len);
 
     Destroy(Tempstr);
     Destroy(Name);
